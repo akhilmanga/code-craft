@@ -1,62 +1,16 @@
-import { DocumentProcessor, ProcessedRepository, DocumentContent, ContractAnalysis } from './DocumentProcessor';
-
-export interface AnalysisResult {
-  summary: ProtocolSummary;
-  architecture: ArchitectureAnalysis;
-  security: SecurityAnalysis;
-  timestamp: string;
-}
-
-export interface ProtocolSummary {
-  name: string;
-  description: string;
-  category: string;
-  complexityScore: number;
-  overview: string;
-  keyFeatures: string[];
-  web3Fundamentals: string;
-  economicModel: EconomicModel;
-}
-
-export interface EconomicModel {
-  tokenomics: string[];
-  feeStructure: string[];
-  incentives: string[];
-  governance: string;
-}
-
-export interface ArchitectureAnalysis {
-  coreContracts: ContractInfo[];
-  dependencies: string[];
-  dataFlow: string;
-  interactionDiagram: string;
-  inheritanceDiagram: string;
-  designPatterns: string[];
-  gasOptimization: GasAnalysis;
-}
-
-export interface ContractInfo {
-  name: string;
-  description: string;
-  functions: number;
-  complexity: number;
-  role: string;
-}
-
-export interface GasAnalysis {
-  efficiency: number;
-  optimizations: string[];
-  concerns: string[];
-}
-
-export interface SecurityAnalysis {
-  rating: string;
-  businessLogic: string;
-  strengths: string[];
-  vulnerabilities: string[];
-  recommendations: string[];
-  auditStatus: string;
-}
+import { DocumentProcessor } from './DocumentProcessor';
+import type {
+  AnalysisResult,
+  ProtocolSummary,
+  EconomicModel,
+  ArchitectureAnalysis,
+  ContractInfo,
+  GasAnalysis,
+  SecurityAnalysis,
+  ProcessedRepository,
+  DocumentContent,
+  ContractAnalysis
+} from './types';
 
 export class AnalysisEngine {
   private documentProcessor: DocumentProcessor;
@@ -828,3 +782,6 @@ The protocol architecture ensures trustless operation while maintaining flexibil
     }
   }
 }
+
+// Re-export types for backward compatibility
+export type { AnalysisResult } from './types';

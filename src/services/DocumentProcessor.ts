@@ -1,66 +1,16 @@
 import { Octokit } from '@octokit/rest';
 import { marked } from 'marked';
 import * as cheerio from 'cheerio';
-
-export interface GitHubFile {
-  name: string;
-  path: string;
-  content: string;
-  type: 'solidity' | 'javascript' | 'typescript' | 'markdown' | 'json' | 'other';
-}
-
-export interface ProcessedRepository {
-  name: string;
-  description: string;
-  files: GitHubFile[];
-  structure: any;
-  dependencies: string[];
-  contractAnalysis: ContractAnalysis[];
-}
-
-export interface ContractAnalysis {
-  fileName: string;
-  contractName: string;
-  functions: FunctionInfo[];
-  events: EventInfo[];
-  modifiers: ModifierInfo[];
-  imports: string[];
-  inheritance: string[];
-  complexity: number;
-}
-
-export interface FunctionInfo {
-  name: string;
-  visibility: string;
-  stateMutability: string;
-  parameters: string[];
-  returns: string[];
-  modifiers: string[];
-}
-
-export interface EventInfo {
-  name: string;
-  parameters: string[];
-}
-
-export interface ModifierInfo {
-  name: string;
-  parameters: string[];
-}
-
-export interface DocumentContent {
-  title: string;
-  content: string;
-  sections: DocumentSection[];
-  links: string[];
-  images: string[];
-}
-
-export interface DocumentSection {
-  title: string;
-  content: string;
-  level: number;
-}
+import type {
+  GitHubFile,
+  ProcessedRepository,
+  ContractAnalysis,
+  FunctionInfo,
+  EventInfo,
+  ModifierInfo,
+  DocumentContent,
+  DocumentSection
+} from './types';
 
 export class DocumentProcessor {
   private octokit: Octokit;
