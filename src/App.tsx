@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import UploadInterface from './components/UploadInterface';
@@ -17,6 +17,31 @@ function App() {
     message: ''
   });
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
+
+  // Initialize dark mode from localStorage or system preference
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    const shouldUseDarkMode = savedTheme === 'dark' || (!savedTheme && prefersDark);
+    setIsDarkMode(shouldUseDarkMode);
+  }, []);
+
+  // Apply dark mode class to document and save to localStorage
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDarkMode]);
+
+  const toggleDarkMode = () => {
+    setIsDarkMode(!isDarkMode);
+  };
 
   const handleAnalysisStateChange = (newState: AnalysisState) => {
     setAnalysisState(newState);
@@ -27,8 +52,8 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen">
-      <Header />
+    <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
+      <Header isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />
       <Hero />
       <UploadInterface 
         onAnalysisStateChange={handleAnalysisStateChange}
