@@ -23,15 +23,7 @@ const Footer: React.FC = () => {
             </ul>
           </div>
           
-          <div>
-            <h4 className="font-semibold mb-4">Resources</h4>
-            <ul className="space-y-2 text-gray-400 dark:text-gray-500 transition-colors duration-300">
-              <li><a href="#" className="hover:text-white dark:hover:text-gray-300 transition-colors">Documentation</a></li>
-              <li><a href="#" className="hover:text-white dark:hover:text-gray-300 transition-colors">API Reference</a></li>
-              <li><a href="#" className="hover:text-white dark:hover:text-gray-300 transition-colors">Examples</a></li>
-              <li><a href="#" className="hover:text-white dark:hover:text-gray-300 transition-colors">Blog</a></li>
-            </ul>
-          </div>
+          
           
           <div>
             <h4 className="font-semibold mb-4">Connect</h4>
