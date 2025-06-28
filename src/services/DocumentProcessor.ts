@@ -72,7 +72,7 @@ export class DocumentProcessor {
     const repoInfo = await this.octokit.repos.get({ owner, repo });
     
     console.log('📁 DocumentProcessor: Getting repository files...');
-    const files = await this.getRepositoryFiles(owner, repo);
+    const files = await this.getRepositoryFiles(owner, repo, repoInfo.data.default_branch);
     console.log(`✅ DocumentProcessor: Retrieved ${files.length} files successfully`);
     console.log('📊 File summary:', {
       solidityFiles: files.filter(f => f.type === 'solidity').length,
@@ -106,7 +106,7 @@ export class DocumentProcessor {
     return result;
   }
 
-  private async getRepositoryFiles(owner: string, repo: string): Promise<GitHubFile[]> {
+  private async getRepositoryFiles(owner: string, repo: string, defaultBranch: string): Promise<GitHubFile[]> {
     console.log(`📁 DocumentProcessor: Getting files for ${owner}/${repo}...`);
     const files: GitHubFile[] = [];
     const seenPaths = new Set<string>();
@@ -115,7 +115,7 @@ export class DocumentProcessor {
       const { data: tree } = await this.octokit.git.getTree({
         owner,
         repo,
-        tree_sha: repoInfo.data.default_branch,
+        tree_sha: defaultBranch,
         recursive: true
       });
 
