@@ -233,7 +233,7 @@ Return a JSON object with the following structure:
           'Authorization': `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify({
-          model: 'gpt-4',
+          model: 'llama-3.3-70b',
           messages: [
             {
               role: 'system',
