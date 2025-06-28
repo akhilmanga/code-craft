@@ -1,6 +1,5 @@
 import { Octokit } from '@octokit/rest';
 import { marked } from 'marked';
-import * as cheerio from 'cheerio';
 import { LLMAdapter } from './LLMAdapter';
 import type {
   GitHubFile,
@@ -329,7 +328,7 @@ export class DocumentProcessor {
 
   private extractFunctions(content: string): FunctionInfo[] {
     const functions: FunctionInfo[] = [];
-    const functionRegex = /function\s+(\w+)\s*$(.*?)$\s*(public|private|internal|external)?\s*(view|pure|payable)?/g;
+    const functionRegex = /function\s+(\w+)\s*\(([^)]*)\)\s*(public|private|internal|external)?\s*(view|pure|payable)?/g;
     let match;
     
     while ((match = functionRegex.exec(content)) !== null) {
@@ -348,7 +347,7 @@ export class DocumentProcessor {
 
   private extractEvents(content: string): EventInfo[] {
     const events: EventInfo[] = [];
-    const eventRegex = /event\s+(\w+)\s*$(.*?)$/g;
+    const eventRegex = /event\s+(\w+)\s*\(([^)]*)\)/g;
     let match;
     
     while ((match = eventRegex.exec(content)) !== null) {
@@ -363,7 +362,7 @@ export class DocumentProcessor {
 
   private extractModifiers(content: string): ModifierInfo[] {
     const modifiers: ModifierInfo[] = [];
-    const modifierRegex = /modifier\s+(\w+)\s*$(.*?)$/g;
+    const modifierRegex = /modifier\s+(\w+)\s*\(([^)]*)\)/g;
     let match;
     
     while ((match = modifierRegex.exec(content)) !== null) {
@@ -397,8 +396,8 @@ export class DocumentProcessor {
   private calculateContractComplexity(content: string): number {
     const functionCount = (content.match(/function\s+/g) || []).length;
     const modifierCount = (content.match(/modifier\s+/g) || []).length;
-    const ifCount = (content.match(/if\s*$/g) || []).length;
-    const loopCount = (content.match(/(for|while|do)\s*$/g) || []).length;
+    const ifCount = (content.match(/if\s*\(/g) || []).length;
+    const loopCount = (content.match(/(for|while|do)\s*\(/g) || []).length;
     
     // Complexity score based on contract size and logic depth
     const complexity = 3 + 
@@ -416,7 +415,7 @@ export class DocumentProcessor {
   }
 
   private extractReturns(content: string, functionStartIndex: number): string[] {
-    const returnRegex = /returns\s*$(.*?)$/;
+    const returnRegex = /returns\s*\(([^)]*)\)/;
     const functionContent = content.slice(functionStartIndex);
     const returnMatch = functionContent.match(returnRegex);
     
@@ -428,7 +427,7 @@ export class DocumentProcessor {
   }
 
   private extractFunctionModifiers(content: string, functionStartIndex: number): string[] {
-    const modifierRegex = /(\w+)\s*$(?:.*$)*{/;
+    const modifierRegex = /(\w+)\s*\([^)]*\)*\s*{/;
     const functionContent = content.slice(functionStartIndex);
     const modifierMatches = functionContent.match(modifierRegex);
     
@@ -533,53 +532,28 @@ export class DocumentProcessor {
     console.log('📊 HTML content length:', html.length);
     
     try {
-      const $ = cheerio.load(html);
-      
-      // Extract title
-      console.log('📝 DocumentProcessor: Extracting title...');
-      const title = $('title').text() || $('h1').first().text() || this.extractTitleFromUrl(originalUrl);
+      // Extract title from HTML without cheerio
+      const title = this.extractTitleFromHtml(html) || this.extractTitleFromUrl(originalUrl);
       console.log('✅ Title extracted:', title);
       
-      // Extract main content
+      // Extract main content using simple text extraction
       console.log('📖 DocumentProcessor: Extracting main content...');
-      const contentSelectors = ['main', '.content', '.documentation', '.docs', 'article', '.markdown-body', '#content', '.container', '.wrapper'];
-      let content = '';
+      const content = this.extractTextContent(html);
+      console.log('📊 Content length:', content.length);
       
-      for (const selector of contentSelectors) {
-        console.log(`🔍 Trying selector: ${selector}`);
-        const element = $(selector);
-        if (element.length > 0) {
-          content = element.text();
-          console.log(`✅ Content found with selector: ${selector}, length: ${content.length}`);
-          break;
-        }
-      }
-      
-      if (!content || content.trim().length < 100) {
-        console.log('⚠️ No substantial content found with specific selectors, using body');
-        content = $('body').text();
-        console.log('📊 Body content length:', content.length);
-      }
-      
-      // Extract sections
+      // Extract sections using simple regex patterns
       console.log('📑 DocumentProcessor: Extracting sections...');
-      const sections = this.extractSections($, content);
+      const sections = this.extractSectionsFromText(content);
       console.log(`✅ Sections extracted: ${sections.length} sections`);
       
-      // Extract links
+      // Extract links using regex
       console.log('🔗 DocumentProcessor: Extracting links...');
-      const links = $('a[href]').map((_, el) => $(el).attr('href')).get()
-        .filter(href => href && (href.startsWith('http') || href.startsWith('/')))
-        .slice(0, 50); // Limit to first 50 links
-      
+      const links = this.extractLinksFromHtml(html);
       console.log('✅ Links extracted:', links.length, 'links');
       
-      // Extract images
+      // Extract images using regex
       console.log('🖼️ DocumentProcessor: Extracting images...');
-      const images = $('img[src]').map((_, el) => $(el).attr('src')).get()
-        .filter(src => src && (src.startsWith('http') || src.startsWith('/')))
-        .slice(0, 20); // Limit to first 20 images
-      
+      const images = this.extractImagesFromHtml(html);
       console.log('✅ Images extracted:', images.length, 'images');
       
       const result = {
@@ -606,6 +580,116 @@ export class DocumentProcessor {
     }
   }
 
+  private extractTitleFromHtml(html: string): string | null {
+    // Extract title from <title> tag
+    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    if (titleMatch) {
+      return titleMatch[1].trim();
+    }
+    
+    // Extract from first h1 tag
+    const h1Match = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+    if (h1Match) {
+      return h1Match[1].trim();
+    }
+    
+    return null;
+  }
+
+  private extractTextContent(html: string): string {
+    // Remove script and style tags
+    let content = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+    content = content.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+    
+    // Remove HTML tags
+    content = content.replace(/<[^>]+>/g, ' ');
+    
+    // Decode HTML entities
+    content = content.replace(/&nbsp;/g, ' ');
+    content = content.replace(/&amp;/g, '&');
+    content = content.replace(/&lt;/g, '<');
+    content = content.replace(/&gt;/g, '>');
+    content = content.replace(/&quot;/g, '"');
+    content = content.replace(/&#39;/g, "'");
+    
+    return content;
+  }
+
+  private extractSectionsFromText(content: string): DocumentSection[] {
+    const sections: DocumentSection[] = [];
+    
+    // Simple pattern to find headings in text
+    const lines = content.split('\n');
+    let currentSection: DocumentSection | null = null;
+    
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      
+      // Skip empty lines
+      if (!trimmedLine) continue;
+      
+      // Check if line looks like a heading (all caps, short, or ends with colon)
+      const isHeading = trimmedLine.length < 100 && 
+        (trimmedLine === trimmedLine.toUpperCase() || 
+         trimmedLine.endsWith(':') ||
+         /^[A-Z][a-z\s]+$/.test(trimmedLine));
+      
+      if (isHeading && trimmedLine.length > 3) {
+        // Save previous section
+        if (currentSection) {
+          sections.push(currentSection);
+        }
+        
+        // Start new section
+        currentSection = {
+          title: trimmedLine.replace(/:$/, ''),
+          content: '',
+          level: 2 // Default level
+        };
+      } else if (currentSection && trimmedLine.length > 10) {
+        // Add content to current section
+        currentSection.content += (currentSection.content ? ' ' : '') + trimmedLine;
+      }
+    }
+    
+    // Add final section
+    if (currentSection) {
+      sections.push(currentSection);
+    }
+    
+    return sections.slice(0, 20); // Limit to 20 sections
+  }
+
+  private extractLinksFromHtml(html: string): string[] {
+    const links: string[] = [];
+    const linkRegex = /<a[^>]+href=["']([^"']+)["'][^>]*>/gi;
+    let match;
+    
+    while ((match = linkRegex.exec(html)) !== null) {
+      const href = match[1];
+      if (href && (href.startsWith('http') || href.startsWith('/'))) {
+        links.push(href);
+      }
+    }
+    
+    return [...new Set(links)].slice(0, 50); // Remove duplicates and limit to 50
+  }
+
+  private extractImagesFromHtml(html: string): string[] {
+    const images: string[] = [];
+    const imgRegex = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
+    let match;
+    
+    while ((match = imgRegex.exec(html)) !== null) {
+      const src = match[1];
+      if (src && (src.startsWith('http') || src.startsWith('/'))) {
+        images.push(src);
+      }
+    }
+    
+    return [...new Set(images)].slice(0, 20); // Remove duplicates and limit to 20
+  }
+
   private extractTitleFromUrl(url: string): string {
     const path = url.replace(/^https?:\/\/[^\/]+/i, '');
     return path
@@ -616,43 +700,6 @@ export class DocumentProcessor {
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
-  }
-
-  private extractSections($: cheerio.CheerioAPI, content: string): DocumentSection[] {
-    console.log('📑 DocumentProcessor: Starting extractSections...');
-    const sections: DocumentSection[] = [];
-    
-    try {
-      $('h1, h2, h3, h4, h5, h6').each((_, element) => {
-        const $el = $(element);
-        const level = parseInt(element.tagName.substring(1));
-        const title = $el.text().trim();
-        
-        if (!title) return;
-        
-        let content = '';
-        let next = $el.next();
-        
-        while (next.length > 0 && !next.is('h1, h2, h3, h4, h5, h6')) {
-          content += next.text() + ' ';
-          next = next.next();
-        }
-        
-        if (title && content.trim()) {
-          sections.push({
-            title,
-            content: this.cleanText(content),
-            level
-          });
-        }
-      });
-      
-      console.log(`✅ DocumentProcessor: extractSections completed, found ${sections.length} sections`);
-    } catch (error) {
-      console.warn('⚠️ DocumentProcessor: Error extracting sections:', error);
-    }
-    
-    return sections;
   }
 
   private cleanText(text: string): string {
