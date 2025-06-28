@@ -72,6 +72,11 @@ export interface ProtocolSummary {
    * Economic model details extracted from documentation
    */
   economicModel: EconomicModel;
+
+  /**
+   * Risk assessment summary
+   */
+  riskAssessment?: string;
 }
 
 export type ProtocolCategory =
@@ -172,9 +177,22 @@ export interface SecurityAnalysis {
   rating: SecurityRating;
   businessLogic: string;
   strengths: string[];
-  vulnerabilities: string[];
+  vulnerabilities: VulnerabilityDetail[];
   recommendations: string[];
   auditStatus: string;
+  documentationCodeMismatches?: string[];
+}
+
+export interface VulnerabilityDetail {
+  name: string;
+  description: string;
+  severity: 'Critical' | 'High' | 'Medium' | 'Low';
+  exploitability: 'High' | 'Medium' | 'Low';
+  category: string;
+  mitigation: string;
+  codeReference?: string;
+  docMismatch?: boolean;
+  citation?: string;
 }
 
 export type SecurityRating = 'A+' | 'A' | 'A-' | 'B+' | 'B' | 'B-' | 'C+' | 'C' | 'C-' | 'D' | 'F';
@@ -205,6 +223,7 @@ export interface ContractAnalysis {
   fileName: string;
   contractName: string;
   functions: FunctionInfo[];
+  events: EventInfo[];
   modifiers: ModifierInfo[];
   imports: string[];
   inheritance: string[];

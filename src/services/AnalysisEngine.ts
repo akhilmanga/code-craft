@@ -8,7 +8,8 @@ import type {
   SecurityAnalysis,
   ProcessedRepository,
   DocumentContent,
-  ContractAnalysis
+  ContractAnalysis,
+  VulnerabilityDetail
 } from './types';
 
 export class AnalysisEngine {
@@ -132,11 +133,15 @@ export class AnalysisEngine {
           overview: llmResult.summary.overview || baseResult.summary.overview,
           keyFeatures: [...new Set([...baseResult.summary.keyFeatures, ...(llmResult.summary.keyFeatures || [])])],
           web3Fundamentals: llmResult.summary.web3Fundamentals || baseResult.summary.web3Fundamentals,
-          economicModel: llmResult.summary.economicModel || baseResult.summary.economicModel
+          economicModel: llmResult.summary.economicModel || baseResult.summary.economicModel,
+          riskAssessment: llmResult.summary.riskAssessment || baseResult.summary.riskAssessment
         },
         architecture: {
           ...baseResult.architecture,
           designPatterns: [...new Set([...baseResult.architecture.designPatterns, ...(llmResult.architecture.designPatterns || [])])],
+          dataFlow: llmResult.architecture.dataFlow || baseResult.architecture.dataFlow,
+          interactionDiagram: llmResult.architecture.interactionDiagram || baseResult.architecture.interactionDiagram,
+          inheritanceDiagram: llmResult.architecture.inheritanceDiagram || baseResult.architecture.inheritanceDiagram,
           gasOptimization: {
             ...baseResult.architecture.gasOptimization,
             optimizations: [...new Set([...baseResult.architecture.gasOptimization.optimizations, ...(llmResult.architecture?.gasOptimization?.optimizations || [])])],
@@ -156,13 +161,29 @@ export class AnalysisEngine {
   private mergeSecurityAnalyses(baseSecurity: SecurityAnalysis, llmSecurity: SecurityAnalysis): SecurityAnalysis {
     console.log('🔒 AnalysisEngine: Merging security analyses...');
     try {
+      // Convert base vulnerabilities (strings) to VulnerabilityDetail objects if needed
+      const baseVulnerabilities: VulnerabilityDetail[] = Array.isArray(baseSecurity.vulnerabilities) && 
+        baseSecurity.vulnerabilities.length > 0 && typeof baseSecurity.vulnerabilities[0] === 'string'
+        ? (baseSecurity.vulnerabilities as unknown as string[]).map(vuln => ({
+            name: vuln,
+            description: vuln,
+            severity: 'Medium' as const,
+            exploitability: 'Medium' as const,
+            category: 'General',
+            mitigation: 'Review and address this vulnerability'
+          }))
+        : baseSecurity.vulnerabilities as VulnerabilityDetail[];
+
       return {
         rating: llmSecurity.rating || baseSecurity.rating,
         businessLogic: llmSecurity.businessLogic || baseSecurity.businessLogic,
         strengths: [...new Set([...baseSecurity.strengths, ...(llmSecurity.strengths || [])])],
-        vulnerabilities: [...new Set([...baseSecurity.vulnerabilities, ...(llmSecurity.vulnerabilities || [])])],
+        vulnerabilities: llmSecurity.vulnerabilities && llmSecurity.vulnerabilities.length > 0 
+          ? llmSecurity.vulnerabilities 
+          : baseVulnerabilities,
         recommendations: [...new Set([...baseSecurity.recommendations, ...(llmSecurity.recommendations || [])])],
-        auditStatus: llmSecurity.auditStatus || baseSecurity.auditStatus
+        auditStatus: llmSecurity.auditStatus || baseSecurity.auditStatus,
+        documentationCodeMismatches: llmSecurity.documentationCodeMismatches || []
       };
     } catch (error) {
       console.error('❌ AnalysisEngine: Error merging security analyses:', error);
@@ -215,36 +236,194 @@ export class AnalysisEngine {
   }
 
   private determineProtocolCategory(repoData: ProcessedRepository, docsData: DocumentContent): ProtocolCategory {
-    // Implementation here...
-    return 'Derivatives Trading';
+    const content = (docsData.content + repoData.description).toLowerCase();
+    
+    if (content.includes('lending') || content.includes('borrow')) return 'Lending Protocol';
+    if (content.includes('derivative') || content.includes('perpetual') || content.includes('futures')) return 'Derivatives Trading';
+    if (content.includes('yield') || content.includes('farm') || content.includes('stake')) return 'Yield Farming';
+    if (content.includes('governance') || content.includes('voting') || content.includes('dao')) return 'Governance Protocol';
+    if (content.includes('bridge') || content.includes('cross-chain')) return 'Cross-Chain Bridge';
+    if (content.includes('nft') || content.includes('erc721') || content.includes('erc1155')) return 'NFT Protocol';
+    if (content.includes('token') && content.includes('manage')) return 'Token Management';
+    if (content.includes('risk') || content.includes('insurance')) return 'Risk Management';
+    if (content.includes('defi') || content.includes('swap') || content.includes('liquidity')) return 'DeFi Protocol';
+    
+    return 'Other';
   }
 
   private generateOverview(repoData: ProcessedRepository, docsData: DocumentContent, category: ProtocolCategory): string {
-    // Implementation here...
-    return 'Protocol overview combining code structure and documentation';
+    const contractCount = repoData.contractAnalysis.length;
+    const avgComplexity = this.calculateAverageComplexity(repoData);
+    
+    return `${repoData.name} is a ${category.toLowerCase()} built on smart contract architecture with ${contractCount} core contracts. 
+
+The protocol demonstrates ${avgComplexity > 7 ? 'high' : avgComplexity > 5 ? 'moderate' : 'low'} complexity with an average complexity score of ${avgComplexity}/10. The system integrates ${repoData.dependencies.length} external dependencies, indicating ${repoData.dependencies.length > 10 ? 'extensive' : 'moderate'} ecosystem integration.
+
+Based on the documentation analysis, the protocol focuses on ${this.extractPrimaryFocus(docsData, category)}. The smart contract architecture follows ${this.detectArchitecturalPattern(repoData)} patterns, ensuring ${this.assessSecurityPosture(repoData)} security posture.
+
+This protocol represents a ${this.assessInnovationLevel(repoData, docsData)} approach to ${category.toLowerCase()}, with potential applications in ${this.identifyUseCases(docsData, category)}.`;
+  }
+
+  private extractPrimaryFocus(docsData: DocumentContent, category: ProtocolCategory): string {
+    const content = docsData.content.toLowerCase();
+    
+    switch (category) {
+      case 'DeFi Protocol':
+        if (content.includes('swap')) return 'decentralized trading and liquidity provision';
+        if (content.includes('liquidity')) return 'liquidity management and yield optimization';
+        return 'decentralized financial services';
+      case 'Lending Protocol':
+        return 'collateralized lending and borrowing mechanisms';
+      case 'Derivatives Trading':
+        return 'perpetual contracts and derivatives trading';
+      case 'Yield Farming':
+        return 'yield generation and farming strategies';
+      default:
+        return 'blockchain-based financial infrastructure';
+    }
+  }
+
+  private detectArchitecturalPattern(repoData: ProcessedRepository): string {
+    const hasProxy = repoData.contractAnalysis.some(c => 
+      c.contractName.toLowerCase().includes('proxy') || 
+      c.imports.some(imp => imp.includes('proxy'))
+    );
+    
+    const hasFactory = repoData.contractAnalysis.some(c => 
+      c.contractName.toLowerCase().includes('factory')
+    );
+    
+    const hasAccessControl = repoData.contractAnalysis.some(c => 
+      c.imports.some(imp => imp.includes('AccessControl') || imp.includes('Ownable'))
+    );
+    
+    const patterns = [];
+    if (hasProxy) patterns.push('upgradeable proxy');
+    if (hasFactory) patterns.push('factory');
+    if (hasAccessControl) patterns.push('access control');
+    
+    return patterns.length > 0 ? patterns.join(', ') : 'modular';
+  }
+
+  private assessSecurityPosture(repoData: ProcessedRepository): string {
+    const hasReentrancyGuard = repoData.contractAnalysis.some(c => 
+      c.imports.some(imp => imp.includes('ReentrancyGuard'))
+    );
+    
+    const hasPausable = repoData.contractAnalysis.some(c => 
+      c.imports.some(imp => imp.includes('Pausable'))
+    );
+    
+    const hasAccessControl = repoData.contractAnalysis.some(c => 
+      c.imports.some(imp => imp.includes('AccessControl') || imp.includes('Ownable'))
+    );
+    
+    const securityFeatures = [hasReentrancyGuard, hasPausable, hasAccessControl].filter(Boolean).length;
+    
+    if (securityFeatures >= 2) return 'robust';
+    if (securityFeatures === 1) return 'moderate';
+    return 'basic';
+  }
+
+  private assessInnovationLevel(repoData: ProcessedRepository, docsData: DocumentContent): string {
+    const avgComplexity = this.calculateAverageComplexity(repoData);
+    const hasAdvancedFeatures = docsData.content.toLowerCase().includes('innovative') || 
+                               docsData.content.toLowerCase().includes('novel') ||
+                               avgComplexity > 7;
+    
+    return hasAdvancedFeatures ? 'innovative' : 'conventional';
+  }
+
+  private identifyUseCases(docsData: DocumentContent, category: ProtocolCategory): string {
+    const content = docsData.content.toLowerCase();
+    
+    const useCases = [];
+    if (content.includes('institutional')) useCases.push('institutional finance');
+    if (content.includes('retail')) useCases.push('retail trading');
+    if (content.includes('dao')) useCases.push('DAO treasury management');
+    if (content.includes('yield')) useCases.push('yield optimization');
+    if (content.includes('hedge')) useCases.push('risk hedging');
+    
+    return useCases.length > 0 ? useCases.join(', ') : 'general DeFi applications';
   }
 
   private extractKeyFeatures(repoData: ProcessedRepository, docsData: DocumentContent): string[] {
-    // Implementation here...
-    return ['Dynamic Open Interest Caps', 'Auto-Deleveraging'];
+    const features = [];
+    const content = docsData.content.toLowerCase();
+    
+    // Extract from documentation
+    if (content.includes('liquidity')) features.push('Liquidity management system');
+    if (content.includes('governance')) features.push('Decentralized governance mechanism');
+    if (content.includes('yield')) features.push('Yield generation and optimization');
+    if (content.includes('stake') || content.includes('staking')) features.push('Staking and rewards system');
+    if (content.includes('flash loan')) features.push('Flash loan functionality');
+    if (content.includes('oracle')) features.push('Oracle price feed integration');
+    
+    // Extract from contract analysis
+    const hasMultiSig = repoData.contractAnalysis.some(c => 
+      c.contractName.toLowerCase().includes('multisig')
+    );
+    if (hasMultiSig) features.push('Multi-signature wallet integration');
+    
+    const hasTimelock = repoData.contractAnalysis.some(c => 
+      c.contractName.toLowerCase().includes('timelock')
+    );
+    if (hasTimelock) features.push('Timelock security mechanism');
+    
+    const hasVault = repoData.contractAnalysis.some(c => 
+      c.contractName.toLowerCase().includes('vault')
+    );
+    if (hasVault) features.push('Vault-based asset management');
+    
+    return features.length > 0 ? features : ['Smart contract automation', 'Decentralized protocol architecture'];
   }
 
   private generateWeb3Fundamentals(category: ProtocolCategory): string {
-    // Implementation here...
-    return 'Web3 fundamentals explanation';
+    return `Web3 represents the next evolution of the internet, built on blockchain technology that enables decentralized, trustless interactions without intermediaries. This protocol operates on Ethereum or compatible blockchains, leveraging smart contracts - self-executing programs that automatically enforce agreements and execute transactions when predetermined conditions are met.
+
+In the context of ${category.toLowerCase()}, several key DeFi (Decentralized Finance) concepts are fundamental to understanding this protocol:
+
+**Liquidity** refers to the availability of assets for trading or lending. Liquidity providers deposit tokens into pools, earning fees from trades or lending activities. **Automated Market Makers (AMMs)** use mathematical formulas to determine asset prices based on supply and demand, eliminating the need for traditional order books. **Yield farming** allows users to earn rewards by providing liquidity or staking tokens in various protocols.
+
+**Token standards** like ERC-20 (fungible tokens) and ERC-721 (NFTs) define how tokens behave and interact within the ecosystem. **Gas optimization** is crucial for reducing transaction costs on Ethereum, involving techniques like batch operations and efficient storage patterns. **Consensus mechanisms** ensure network security and transaction finality, while **interoperability** enables cross-chain functionality and broader ecosystem integration.
+
+Understanding these fundamentals is essential for evaluating the protocol's design decisions, security considerations, and potential risks in the broader Web3 ecosystem.`;
   }
 
   private analyzeEconomicModel(docsData: DocumentContent): EconomicModel {
-    // Implementation here...
-    return {
-      tokenomics: ['Utility token for protocol access'],
-      feeStructure: ['Standard protocol fees'],
-      incentives: ['Participation incentives'],
-      governance: 'Token-based governance system'
-    };
+    const content = docsData.content.toLowerCase();
+    
+    const tokenomics = [];
+    if (content.includes('utility token')) tokenomics.push('Utility token for protocol access and governance');
+    if (content.includes('governance token')) tokenomics.push('Governance token for voting and protocol decisions');
+    if (content.includes('reward token')) tokenomics.push('Reward token for incentivizing participation');
+    if (content.includes('burn') || content.includes('deflationary')) tokenomics.push('Token burning mechanism for deflationary pressure');
+    if (tokenomics.length === 0) tokenomics.push('Standard token economics with utility functions');
+    
+    const feeStructure = [];
+    if (content.includes('trading fee')) feeStructure.push('Trading fees on transactions');
+    if (content.includes('protocol fee')) feeStructure.push('Protocol fees for system maintenance');
+    if (content.includes('withdrawal fee')) feeStructure.push('Withdrawal fees for liquidity management');
+    if (content.includes('performance fee')) feeStructure.push('Performance fees on generated yields');
+    if (feeStructure.length === 0) feeStructure.push('Standard protocol fees for operations');
+    
+    const incentives = [];
+    if (content.includes('liquidity mining')) incentives.push('Liquidity mining rewards for providers');
+    if (content.includes('staking reward')) incentives.push('Staking rewards for token holders');
+    if (content.includes('yield')) incentives.push('Yield generation through protocol participation');
+    if (content.includes('airdrop')) incentives.push('Token airdrops for early adopters');
+    if (incentives.length === 0) incentives.push('Participation incentives for protocol users');
+    
+    let governance = 'Token-based governance system';
+    if (content.includes('dao')) governance = 'Decentralized Autonomous Organization (DAO) governance';
+    if (content.includes('multisig')) governance = 'Multi-signature governance with elected representatives';
+    if (content.includes('timelock')) governance = 'Timelock-protected governance for security';
+    
+    return { tokenomics, feeStructure, incentives, governance };
   }
 
   private calculateAverageComplexity(repoData: ProcessedRepository): number {
+    if (repoData.contractAnalysis.length === 0) return 5;
     const total = repoData.contractAnalysis.reduce((sum, contract) => sum + contract.complexity, 0);
     return Math.round((total / repoData.contractAnalysis.length) * 10) / 10;
   }
@@ -289,51 +468,211 @@ export class AnalysisEngine {
   }
 
   private generateContractDescription(contract: ContractAnalysis): string {
-    // Implementation here...
-    return `${contract.contractName} smart contract managing core functionality`;
+    const functionTypes = contract.functions.reduce((acc, func) => {
+      acc[func.visibility] = (acc[func.visibility] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    const hasEvents = contract.events.length > 0;
+    const hasModifiers = contract.modifiers.length > 0;
+    const hasInheritance = contract.inheritance.length > 0;
+    
+    let description = `${contract.contractName} smart contract`;
+    
+    if (hasInheritance) {
+      description += ` inheriting from ${contract.inheritance.join(', ')}`;
+    }
+    
+    description += ` with ${contract.functions.length} functions`;
+    
+    if (hasEvents) {
+      description += `, ${contract.events.length} events`;
+    }
+    
+    if (hasModifiers) {
+      description += `, and ${contract.modifiers.length} custom modifiers`;
+    }
+    
+    description += `. Manages core protocol functionality with ${functionTypes.external || 0} external and ${functionTypes.public || 0} public interfaces.`;
+    
+    return description;
   }
 
   private determineContractRole(contractName: string): string {
-    // Implementation here...
+    const name = contractName.toLowerCase();
+    
+    if (name.includes('vault') || name.includes('pool')) return 'Asset Management Contract';
+    if (name.includes('factory')) return 'Factory Contract';
+    if (name.includes('router') || name.includes('gateway')) return 'Router/Gateway Contract';
+    if (name.includes('governance') || name.includes('voting')) return 'Governance Contract';
+    if (name.includes('token') || name.includes('erc20')) return 'Token Contract';
+    if (name.includes('oracle') || name.includes('price')) return 'Oracle/Price Feed Contract';
+    if (name.includes('timelock')) return 'Security/Timelock Contract';
+    if (name.includes('proxy') || name.includes('implementation')) return 'Proxy/Implementation Contract';
+    if (name.includes('staking') || name.includes('reward')) return 'Staking/Rewards Contract';
+    
     return 'Core Protocol Contract';
   }
 
   private generateDataFlow(contracts: ContractInfo[]): string {
-    // Implementation here...
-    return 'Traders <-> Market.sol <-> ZlpVault.sol <-> Liquidity Providers';
+    if (contracts.length === 0) {
+      return 'graph TD\n    A[No contracts found]';
+    }
+    
+    let mermaidCode = 'graph TD\n';
+    mermaidCode += '    U[Users] --> M[Main Contract]\n';
+    
+    contracts.forEach((contract, index) => {
+      const nodeId = `C${index}`;
+      mermaidCode += `    M --> ${nodeId}[${contract.name}]\n`;
+      
+      if (contract.role.includes('Vault') || contract.role.includes('Asset')) {
+        mermaidCode += `    ${nodeId} --> T[Token Transfers]\n`;
+      }
+      
+      if (contract.role.includes('Oracle')) {
+        mermaidCode += `    EXT[External Oracles] --> ${nodeId}\n`;
+      }
+    });
+    
+    mermaidCode += '    T --> LP[Liquidity Providers]\n';
+    mermaidCode += '    M --> E[Events & Logs]\n';
+    
+    return mermaidCode;
   }
 
   private generateInteractionDiagram(contracts: ContractInfo[]): string {
-    let mermaidCode = 'classDiagram\n';
-    contracts.forEach(c => {
-      mermaidCode += `    class ${c.name} {\n`;
-      mermaidCode += '        +modifier onlyOwner()\n';
-      mermaidCode += '        +function execute()\n';
-      mermaidCode += '        +function validate()\n';
-      mermaidCode += '    }\n';
+    if (contracts.length === 0) {
+      return 'sequenceDiagram\n    participant U as User\n    Note over U: No contracts to analyze';
+    }
+    
+    let mermaidCode = 'sequenceDiagram\n';
+    mermaidCode += '    participant U as User\n';
+    
+    contracts.slice(0, 3).forEach(contract => {
+      const shortName = contract.name.replace(/Contract$/, '').substring(0, 10);
+      mermaidCode += `    participant ${shortName} as ${contract.name}\n`;
     });
-    contracts.slice(1).forEach((c, i) => {
-      mermaidCode += `    ${contracts[i].name} <|-- ${c.name}\n`;
-    });
+    
+    mermaidCode += '    U->>+Main: deposit(amount)\n';
+    mermaidCode += '    Main->>+Vault: updateBalance(user, amount)\n';
+    mermaidCode += '    Vault-->>-Main: balanceUpdated\n';
+    mermaidCode += '    Main->>+Token: transfer(from, to, amount)\n';
+    mermaidCode += '    Token-->>-Main: transferComplete\n';
+    mermaidCode += '    Main-->>-U: depositConfirmed\n';
+    
     return mermaidCode;
   }
 
   private generateInheritanceDiagram(contracts: ContractInfo[]): string {
-    // Implementation here...
-    return 'classDiagram\n    BaseContract <|-- MainContract';
+    if (contracts.length === 0) {
+      return 'classDiagram\n    class NoContracts {\n        +analyze() void\n    }';
+    }
+    
+    let mermaidCode = 'classDiagram\n';
+    
+    // Add base contracts
+    mermaidCode += '    class BaseContract {\n';
+    mermaidCode += '        +modifier onlyOwner()\n';
+    mermaidCode += '        +function pause()\n';
+    mermaidCode += '        +function unpause()\n';
+    mermaidCode += '    }\n';
+    
+    contracts.forEach(contract => {
+      mermaidCode += `    class ${contract.name} {\n`;
+      mermaidCode += '        +modifier onlyAuthorized()\n';
+      mermaidCode += '        +function execute()\n';
+      mermaidCode += '        +function validate()\n';
+      mermaidCode += `        +uint256 complexity: ${contract.complexity}\n`;
+      mermaidCode += '    }\n';
+      
+      mermaidCode += `    BaseContract <|-- ${contract.name}\n`;
+    });
+    
+    return mermaidCode;
   }
 
   private detectDesignPatterns(repoData: ProcessedRepository): string[] {
-    // Implementation here...
-    return ['Factory Pattern', 'Access Control', 'Circuit Breaker'];
+    const patterns = [];
+    
+    // Check for common patterns
+    const hasFactory = repoData.contractAnalysis.some(c => 
+      c.contractName.toLowerCase().includes('factory')
+    );
+    if (hasFactory) patterns.push('Factory Pattern');
+    
+    const hasProxy = repoData.contractAnalysis.some(c => 
+      c.contractName.toLowerCase().includes('proxy') || 
+      c.imports.some(imp => imp.includes('proxy'))
+    );
+    if (hasProxy) patterns.push('Proxy Pattern');
+    
+    const hasAccessControl = repoData.contractAnalysis.some(c => 
+      c.imports.some(imp => imp.includes('AccessControl') || imp.includes('Ownable'))
+    );
+    if (hasAccessControl) patterns.push('Access Control Pattern');
+    
+    const hasReentrancyGuard = repoData.contractAnalysis.some(c => 
+      c.imports.some(imp => imp.includes('ReentrancyGuard'))
+    );
+    if (hasReentrancyGuard) patterns.push('Reentrancy Guard Pattern');
+    
+    const hasPausable = repoData.contractAnalysis.some(c => 
+      c.imports.some(imp => imp.includes('Pausable'))
+    );
+    if (hasPausable) patterns.push('Circuit Breaker Pattern');
+    
+    const hasTimelock = repoData.contractAnalysis.some(c => 
+      c.contractName.toLowerCase().includes('timelock')
+    );
+    if (hasTimelock) patterns.push('Timelock Pattern');
+    
+    return patterns.length > 0 ? patterns : ['Standard Contract Pattern'];
   }
 
   private analyzeGasOptimization(repoData: ProcessedRepository): GasAnalysis {
-    // Implementation here...
+    const optimizations = [];
+    const concerns = [];
+    
+    // Check for optimizations
+    const hasBatchOperations = repoData.contractAnalysis.some(c => 
+      c.functions.some(f => f.name.toLowerCase().includes('batch'))
+    );
+    if (hasBatchOperations) optimizations.push('Batch operations implemented');
+    
+    const hasPackedStructs = repoData.files.some(f => 
+      f.content.includes('packed') || f.content.includes('uint128') || f.content.includes('uint64')
+    );
+    if (hasPackedStructs) optimizations.push('Storage packing utilized');
+    
+    const hasImmutable = repoData.files.some(f => 
+      f.content.includes('immutable')
+    );
+    if (hasImmutable) optimizations.push('Immutable variables used');
+    
+    // Check for concerns
+    const avgComplexity = this.calculateAverageComplexity(repoData);
+    if (avgComplexity > 7) concerns.push('High contract complexity may increase gas costs');
+    
+    const hasLoops = repoData.files.some(f => 
+      f.content.includes('for (') || f.content.includes('while (')
+    );
+    if (hasLoops) concerns.push('Loop operations detected - potential gas limit issues');
+    
+    const hasMultipleExternalCalls = repoData.contractAnalysis.some(c => 
+      c.functions.filter(f => f.name.toLowerCase().includes('call')).length > 2
+    );
+    if (hasMultipleExternalCalls) concerns.push('Multiple external calls may increase gas costs');
+    
+    // Calculate efficiency score
+    const optimizationScore = Math.min(optimizations.length * 2, 6);
+    const concernPenalty = Math.min(concerns.length * 1.5, 4);
+    const efficiency = Math.max(1, Math.min(10, 5 + optimizationScore - concernPenalty));
+    
     return {
-      efficiency: 7.5,
-      optimizations: ['Batch operations', 'Modifier reuse'],
-      concerns: ['High complexity', 'Loop operations']
+      efficiency: Math.round(efficiency * 10) / 10,
+      optimizations: optimizations.length > 0 ? optimizations : ['Standard gas optimization practices'],
+      concerns: concerns.length > 0 ? concerns : []
     };
   }
 
@@ -350,7 +689,7 @@ export class AnalysisEngine {
     const rating = this.calculateSecurityRating(repoData.contractAnalysis);
     const businessLogic = this.analyzeBusinessLogic(repoData, docsData);
     const strengths = this.extractSecurityStrengths(repoData, docsData);
-    const vulnerabilities = this.extractSecurityVulnerabilities(repoData, docsData);
+    const vulnerabilities: VulnerabilityDetail[] = []; // Will be populated by LLM
     const recommendations = this.generateSecurityRecommendations(repoData, docsData);
     const auditStatus = this.checkAuditStatus(repoData, docsData);
 
@@ -361,38 +700,172 @@ export class AnalysisEngine {
       strengths,
       vulnerabilities,
       recommendations,
-      auditStatus
+      auditStatus,
+      documentationCodeMismatches: []
     };
   }
 
-  private calculateSecurityRating(contracts: ContractAnalysis[]): string {
-    // Implementation here...
-    return 'B+';
+  private calculateSecurityRating(contracts: ContractAnalysis[]): SecurityRating {
+    let score = 70; // Base score
+    
+    // Check for security features
+    const hasAccessControl = contracts.some(c => 
+      c.imports.some(imp => imp.includes('AccessControl') || imp.includes('Ownable'))
+    );
+    if (hasAccessControl) score += 10;
+    
+    const hasReentrancyGuard = contracts.some(c => 
+      c.imports.some(imp => imp.includes('ReentrancyGuard'))
+    );
+    if (hasReentrancyGuard) score += 10;
+    
+    const hasPausable = contracts.some(c => 
+      c.imports.some(imp => imp.includes('Pausable'))
+    );
+    if (hasPausable) score += 5;
+    
+    // Penalize for complexity
+    const avgComplexity = contracts.reduce((sum, c) => sum + c.complexity, 0) / contracts.length;
+    if (avgComplexity > 8) score -= 15;
+    else if (avgComplexity > 6) score -= 10;
+    
+    // Convert to letter grade
+    if (score >= 95) return 'A+';
+    if (score >= 90) return 'A';
+    if (score >= 85) return 'A-';
+    if (score >= 80) return 'B+';
+    if (score >= 75) return 'B';
+    if (score >= 70) return 'B-';
+    if (score >= 65) return 'C+';
+    if (score >= 60) return 'C';
+    if (score >= 55) return 'C-';
+    if (score >= 50) return 'D';
+    return 'F';
   }
 
   private analyzeBusinessLogic(repoData: ProcessedRepository, docsData: DocumentContent): string {
-    // Implementation here...
-    return 'Core business logic revolves around liquidity provision and perpetual trading';
+    const contractCount = repoData.contractAnalysis.length;
+    const avgComplexity = this.calculateAverageComplexity(repoData);
+    const hasGovernance = docsData.content.toLowerCase().includes('governance') || 
+                         repoData.contractAnalysis.some(c => c.contractName.toLowerCase().includes('governance'));
+    
+    let analysis = `The protocol's business logic centers around ${contractCount} smart contracts with an average complexity of ${avgComplexity}/10. `;
+    
+    if (hasGovernance) {
+      analysis += `The system incorporates governance mechanisms for decentralized decision-making, allowing token holders to participate in protocol upgrades and parameter adjustments. `;
+    }
+    
+    analysis += `Core business operations are distributed across multiple contracts to ensure modularity and upgradeability. `;
+    
+    const hasVault = repoData.contractAnalysis.some(c => c.contractName.toLowerCase().includes('vault'));
+    if (hasVault) {
+      analysis += `Asset management is handled through vault contracts that secure user funds and manage liquidity. `;
+    }
+    
+    const hasOracle = docsData.content.toLowerCase().includes('oracle') || 
+                     repoData.contractAnalysis.some(c => c.contractName.toLowerCase().includes('oracle'));
+    if (hasOracle) {
+      analysis += `The protocol relies on external price feeds and oracles for accurate market data, introducing dependencies on third-party services. `;
+    }
+    
+    analysis += `The business logic emphasizes ${avgComplexity > 7 ? 'sophisticated' : 'straightforward'} operations with ${avgComplexity > 7 ? 'multiple layers of validation and complex state management' : 'clear execution paths and minimal state complexity'}.`;
+    
+    return analysis;
   }
 
   private extractSecurityStrengths(repoData: ProcessedRepository, docsData: DocumentContent): string[] {
-    // Implementation here...
-    return ['Comprehensive access control implementation', 'Emergency pause mechanisms'];
-  }
-
-  private extractSecurityVulnerabilities(repoData: ProcessedRepository, docsData: DocumentContent): string[] {
-    // Implementation here...
-    return ['High contract complexity', 'No explicit reentrancy protection'];
+    const strengths = [];
+    
+    // Check for security patterns
+    const hasAccessControl = repoData.contractAnalysis.some(c => 
+      c.imports.some(imp => imp.includes('AccessControl') || imp.includes('Ownable'))
+    );
+    if (hasAccessControl) strengths.push('Comprehensive access control implementation with role-based permissions');
+    
+    const hasReentrancyGuard = repoData.contractAnalysis.some(c => 
+      c.imports.some(imp => imp.includes('ReentrancyGuard'))
+    );
+    if (hasReentrancyGuard) strengths.push('Reentrancy protection implemented across critical functions');
+    
+    const hasPausable = repoData.contractAnalysis.some(c => 
+      c.imports.some(imp => imp.includes('Pausable'))
+    );
+    if (hasPausable) strengths.push('Emergency pause mechanisms for crisis management');
+    
+    const hasTimelock = repoData.contractAnalysis.some(c => 
+      c.contractName.toLowerCase().includes('timelock')
+    );
+    if (hasTimelock) strengths.push('Timelock delays for critical administrative functions');
+    
+    const hasMultiSig = repoData.contractAnalysis.some(c => 
+      c.contractName.toLowerCase().includes('multisig')
+    );
+    if (hasMultiSig) strengths.push('Multi-signature wallet integration for enhanced security');
+    
+    const usesOpenZeppelin = repoData.dependencies.some(dep => 
+      dep.includes('openzeppelin')
+    );
+    if (usesOpenZeppelin) strengths.push('Utilizes battle-tested OpenZeppelin security libraries');
+    
+    const hasEvents = repoData.contractAnalysis.some(c => c.events.length > 0);
+    if (hasEvents) strengths.push('Comprehensive event logging for transparency and monitoring');
+    
+    return strengths.length > 0 ? strengths : ['Basic security measures implemented'];
   }
 
   private generateSecurityRecommendations(repoData: ProcessedRepository, docsData: DocumentContent): string[] {
-    // Implementation here...
-    return ['Implement reentrancy guards', 'Add emergency pause functionality'];
+    const recommendations = [];
+    
+    // Check for missing security features
+    const hasReentrancyGuard = repoData.contractAnalysis.some(c => 
+      c.imports.some(imp => imp.includes('ReentrancyGuard'))
+    );
+    if (!hasReentrancyGuard) recommendations.push('Implement reentrancy guards on all state-changing functions');
+    
+    const hasPausable = repoData.contractAnalysis.some(c => 
+      c.imports.some(imp => imp.includes('Pausable'))
+    );
+    if (!hasPausable) recommendations.push('Add emergency pause functionality for crisis management');
+    
+    const hasTimelock = repoData.contractAnalysis.some(c => 
+      c.contractName.toLowerCase().includes('timelock')
+    );
+    if (!hasTimelock) recommendations.push('Implement timelock delays for administrative functions');
+    
+    const avgComplexity = this.calculateAverageComplexity(repoData);
+    if (avgComplexity > 7) {
+      recommendations.push('Consider breaking down complex contracts into smaller, more manageable modules');
+      recommendations.push('Conduct thorough testing of complex business logic paths');
+    }
+    
+    const hasOracle = docsData.content.toLowerCase().includes('oracle');
+    if (hasOracle) {
+      recommendations.push('Implement oracle price validation and circuit breakers');
+      recommendations.push('Consider using multiple oracle sources for price feed redundancy');
+    }
+    
+    recommendations.push('Conduct comprehensive security audit before mainnet deployment');
+    recommendations.push('Implement comprehensive monitoring and alerting systems');
+    
+    return recommendations;
   }
 
   private checkAuditStatus(repoData: ProcessedRepository, docsData: DocumentContent): string {
-    // Implementation here...
-    return 'No public audit information available';
+    const content = (docsData.content + repoData.description).toLowerCase();
+    
+    if (content.includes('audited by') || content.includes('audit report')) {
+      return 'Security audit completed - review audit reports for detailed findings';
+    }
+    
+    if (content.includes('audit') && content.includes('pending')) {
+      return 'Security audit in progress - awaiting completion';
+    }
+    
+    if (content.includes('audit') && content.includes('planned')) {
+      return 'Security audit planned but not yet initiated';
+    }
+    
+    return 'No public audit information available - recommend professional security review';
   }
 
   // -----------------------------
@@ -407,7 +880,7 @@ export class AnalysisEngine {
       } else if (error.message.includes('CORS')) {
         return new Error('Unable to access documentation due to CORS policy. Please ensure the documentation URL is publicly accessible.');
       } else if (error.message.includes('Invalid GitHub URL')) {
-        return new Error('Please provide a valid GitHub repository URL (e.g., https://github.com/owner/repo ).');
+        return new Error('Please provide a valid GitHub repository URL (e.g., https://github.com/owner/repo).');
       } else if (error.message.includes('Failed to fetch documentation')) {
         return new Error('Failed to fetch documentation. Please check the URL and try again.');
       } else {
@@ -418,3 +891,6 @@ export class AnalysisEngine {
     return new Error('Failed to analyze protocol due to an unexpected error');
   }
 }
+
+// Export the AnalysisResult type for use in other components
+export type { AnalysisResult };

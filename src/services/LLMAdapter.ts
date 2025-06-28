@@ -5,7 +5,8 @@ import type {
   ProtocolSummary, 
   ArchitectureAnalysis, 
   SecurityAnalysis,
-  ContractAnalysis 
+  ContractAnalysis,
+  VulnerabilityDetail
 } from './types';
 
 export interface LLMContext {
@@ -64,7 +65,8 @@ export class LLMAdapter {
     console.log('📝 LLMAdapter: Generating enhanced protocol summary...');
     
     const prompt = `
-You are a senior blockchain analyst with deep knowledge of Web3 protocols.
+You are a senior blockchain analyst with deep knowledge of Web3 protocols, DeFi mechanisms, and smart contract architecture.
+
 Analyze this protocol combining code structure and documentation:
 
 Repository Analysis:
@@ -73,16 +75,34 @@ ${this.stringifyRepoData(context.repoData)}
 Documentation Summary:
 ${context.docsData.content.substring(0, 5000)}...
 
-Provide a detailed protocol summary with:
-1. Comprehensive overview of the protocol's purpose and functionality
-2. Key technical innovations and unique features
-3. Economic model implications and tokenomics analysis
-4. Risk assessment and potential concerns
-5. Interactions between core components and their relationships
+Provide a comprehensive protocol summary with detailed explanations:
 
-Focus on providing insights that go beyond basic code analysis, incorporating
-the documentation context to explain the protocol's real-world applications
-and business logic.
+1. **Overview**: Write a thorough 3-4 paragraph overview explaining:
+   - The protocol's core purpose and value proposition
+   - How it fits into the broader DeFi/Web3 ecosystem
+   - Key technical innovations and differentiators
+   - Target users and use cases
+
+2. **Key Features**: Extract and explain 5-8 key features with technical details
+
+3. **Web3 Fundamentals**: Provide a detailed explanation (3-4 paragraphs) covering:
+   - Blockchain fundamentals relevant to this protocol
+   - DeFi concepts like liquidity, yield farming, AMMs, lending/borrowing
+   - Token standards (ERC-20, ERC-721, etc.) used
+   - Consensus mechanisms and gas optimization strategies
+   - Interoperability and cross-chain considerations
+
+4. **Economic Model**: Provide detailed analysis of:
+   - Tokenomics: Token utility, supply mechanisms, distribution
+   - Fee Structure: All types of fees and how they're calculated
+   - Incentives: Reward mechanisms, yield generation, staking
+   - Governance: Decision-making processes and token voting
+
+5. **Risk Assessment**: Comprehensive risk analysis covering:
+   - Technical risks (smart contract bugs, oracle failures)
+   - Economic risks (token volatility, liquidity risks)
+   - Governance risks (centralization, attack vectors)
+   - Regulatory and compliance considerations
 
 Return a JSON object with the following structure:
 {
@@ -90,15 +110,16 @@ Return a JSON object with the following structure:
   "description": "Brief description",
   "category": "DeFi Protocol",
   "complexityScore": 7.5,
-  "overview": "Detailed overview...",
-  "keyFeatures": ["Feature 1", "Feature 2"],
-  "web3Fundamentals": "Web3 fundamentals explanation...",
+  "overview": "Detailed 3-4 paragraph overview...",
+  "keyFeatures": ["Feature 1 with technical details", "Feature 2 with technical details"],
+  "web3Fundamentals": "Detailed 3-4 paragraph explanation of Web3/DeFi concepts...",
   "economicModel": {
-    "tokenomics": ["Token role 1", "Token role 2"],
-    "feeStructure": ["Fee type 1", "Fee type 2"],
-    "incentives": ["Incentive 1", "Incentive 2"],
-    "governance": "Governance model description"
-  }
+    "tokenomics": ["Detailed tokenomics explanation 1", "Detailed tokenomics explanation 2"],
+    "feeStructure": ["Detailed fee structure 1", "Detailed fee structure 2"],
+    "incentives": ["Detailed incentive mechanism 1", "Detailed incentive mechanism 2"],
+    "governance": "Detailed governance model description"
+  },
+  "riskAssessment": "Comprehensive risk analysis covering technical, economic, governance, and regulatory risks..."
 }
 `;
 
@@ -116,7 +137,7 @@ Return a JSON object with the following structure:
     console.log('🏗️ LLMAdapter: Generating enhanced architecture analysis...');
     
     const prompt = `
-Create a detailed architecture analysis for this Web3 protocol:
+Create a detailed smart contract architecture analysis for this Web3 protocol:
 - ${context.repoData.contractAnalysis.length} Solidity contracts analyzed
 - ${context.repoData.dependencies.length} external dependencies identified
 - ${context.repoData.files.filter(f => f.type === 'solidity').length} smart contract files processed
@@ -124,39 +145,53 @@ Create a detailed architecture analysis for this Web3 protocol:
 Contract Details:
 ${this.stringifyContractAnalysis(context.repoData.contractAnalysis)}
 
-Focus on:
-1. Critical contract relationships and data dependencies
-2. Detailed data flow between components with security implications
-3. Advanced design pattern usage and architectural decisions
-4. Gas optimization strategies and efficiency considerations
-5. Upgrade patterns and governance mechanisms
+Generate detailed Mermaid.js diagrams for smart contract architecture:
 
-Generate enhanced Mermaid.js diagrams that include:
-- Detailed function call flows
-- State change propagation
-- External dependency interactions
+1. **Data Flow Diagram**: Create a flowchart using 'graph TD' syntax showing:
+   - User interactions with the protocol
+   - Data flow between smart contracts
+   - External protocol integrations
+   - State changes and storage updates
+
+2. **Interaction Sequence Diagram**: Create a sequence diagram showing:
+   - Step-by-step function call sequences
+   - Cross-contract interactions
+   - External protocol calls
+   - Event emissions and state changes
+
+3. **Contract Inheritance Diagram**: Create a class diagram showing:
+   - Contract inheritance relationships
+   - Interface implementations
+   - Key functions and modifiers
+   - Access control patterns
+
+Focus on:
+- Critical contract relationships and dependencies
 - Security boundaries and access controls
+- Gas optimization patterns
+- Upgrade mechanisms and proxy patterns
+- External protocol integrations
 
 Return a JSON object with the following structure:
 {
   "coreContracts": [
     {
       "name": "ContractName",
-      "description": "Contract description",
+      "description": "Detailed contract description with purpose and key functions",
       "functions": 10,
       "complexity": 7.5,
-      "role": "Core Protocol Contract"
+      "role": "Specific role in the protocol architecture"
     }
   ],
   "dependencies": ["dependency1", "dependency2"],
-  "dataFlow": "Mermaid.js flowchart syntax",
-  "interactionDiagram": "Mermaid.js sequence diagram syntax",
-  "inheritanceDiagram": "Mermaid.js class diagram syntax",
-  "designPatterns": ["Pattern1", "Pattern2"],
+  "dataFlow": "graph TD\\n    A[Users] --> B[MainContract]\\n    B --> C[VaultContract]\\n    C --> D[TokenContract]",
+  "interactionDiagram": "sequenceDiagram\\n    participant U as User\\n    participant M as MainContract\\n    participant V as Vault\\n    U->>M: deposit()\\n    M->>V: updateBalance()",
+  "inheritanceDiagram": "classDiagram\\n    class BaseContract {\\n        +onlyOwner()\\n        +pause()\\n    }\\n    BaseContract <|-- MainContract",
+  "designPatterns": ["Factory Pattern", "Proxy Pattern", "Access Control"],
   "gasOptimization": {
     "efficiency": 8.0,
-    "optimizations": ["Optimization 1", "Optimization 2"],
-    "concerns": ["Concern 1", "Concern 2"]
+    "optimizations": ["Batch operations implemented", "Storage packing used"],
+    "concerns": ["Complex loops in critical functions", "Multiple external calls"]
   }
 }
 `;
@@ -175,7 +210,7 @@ Return a JSON object with the following structure:
     console.log('🔒 LLMAdapter: Generating enhanced security analysis...');
     
     const prompt = `
-Perform comprehensive security analysis of this Web3 protocol:
+Perform comprehensive security analysis of this Web3 protocol with detailed vulnerability assessment:
 
 Code Structure Analysis:
 ${JSON.stringify(this.sanitizeContractData(context.repoData), null, 2)}
@@ -186,29 +221,54 @@ ${context.docsData.content.substring(0, 5000)}...
 Base Security Assessment:
 ${JSON.stringify(context.baseResult.security, null, 2)}
 
-Identify and analyze:
-1. Critical vulnerabilities with specific code references
-2. Discrepancies between documentation claims and implementation
-3. Best practice violations with severity assessment
-4. Complex business logic risks and edge cases
-5. Integration risks with external protocols
-6. Governance and centralization risks
+Provide detailed security analysis with:
 
-For each finding, provide:
-- Specific contract and function references
-- Severity level (Critical/High/Medium/Low)
-- Exploitation scenarios
-- Detailed mitigation strategies
-- Code examples where applicable
+1. **Vulnerability Details**: For each vulnerability found, provide:
+   - Specific name and description
+   - Severity level (Critical/High/Medium/Low)
+   - Exploitability assessment (High/Medium/Low)
+   - Category (e.g., "Reentrancy", "Access Control", "Oracle Manipulation")
+   - Detailed mitigation strategies
+   - Code references where applicable
+   - Whether documentation accurately reflects the implementation
+
+2. **Documentation-Code Mismatches**: Identify discrepancies between:
+   - Documented security features vs actual implementation
+   - Claimed functionality vs code behavior
+   - Missing security measures mentioned in docs
+
+3. **Risk Scoring**: Assign risk scores based on:
+   - Potential impact on protocol and users
+   - Likelihood of exploitation
+   - Ease of exploitation
+   - Financial impact potential
+
+4. **Contextual Explanations**: Explain vulnerabilities in the context of:
+   - This specific protocol's business logic
+   - Real-world attack scenarios
+   - Historical precedents in similar protocols
 
 Return a JSON object with the following structure:
 {
   "rating": "B+",
-  "businessLogic": "Detailed business logic analysis...",
-  "strengths": ["Strength 1", "Strength 2"],
-  "vulnerabilities": ["Vulnerability 1", "Vulnerability 2"],
-  "recommendations": ["Recommendation 1", "Recommendation 2"],
-  "auditStatus": "Audit status description"
+  "businessLogic": "Detailed business logic analysis with security implications...",
+  "strengths": ["Comprehensive access control implementation", "Emergency pause mechanisms"],
+  "vulnerabilities": [
+    {
+      "name": "Reentrancy Vulnerability in Withdrawal Function",
+      "description": "The withdraw function in Contract.sol does not follow checks-effects-interactions pattern...",
+      "severity": "High",
+      "exploitability": "Medium",
+      "category": "Reentrancy",
+      "mitigation": "Implement ReentrancyGuard modifier and follow CEI pattern...",
+      "codeReference": "Contract.sol:line 45-60",
+      "docMismatch": false,
+      "citation": "Based on analysis of function call patterns and state changes"
+    }
+  ],
+  "recommendations": ["Implement comprehensive reentrancy protection", "Add time delays for critical operations"],
+  "auditStatus": "No public audit information available",
+  "documentationCodeMismatches": ["Documentation claims automatic slashing but no slashing mechanism found in code"]
 }
 `;
 
@@ -237,7 +297,7 @@ Return a JSON object with the following structure:
           messages: [
             {
               role: 'system',
-              content: 'You are an expert Web3 protocol analyst. Always respond with valid JSON objects as requested.'
+              content: 'You are an expert Web3 protocol analyst and security researcher. Always respond with valid JSON objects as requested. Provide detailed, technical analysis with specific examples and actionable insights.'
             },
             {
               role: 'user',
