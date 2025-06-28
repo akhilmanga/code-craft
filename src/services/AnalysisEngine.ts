@@ -441,7 +441,7 @@ Understanding these fundamentals is essential for evaluating the protocol's desi
     const dependencies = repoData.dependencies;
     const dataFlow = this.generateDataFlow(contracts);
     const interactionDiagram = this.generateInteractionDiagram(contracts);
-    const inheritanceDiagram = this.generateInheritanceDiagram(contracts);
+    const inheritanceDiagram = this.generateInheritanceDiagram(repoData.contractAnalysis);
     const designPatterns = this.detectDesignPatterns(repoData);
     const gasOptimization = this.analyzeGasOptimization(repoData);
 
@@ -516,77 +516,174 @@ Understanding these fundamentals is essential for evaluating the protocol's desi
 
   private generateDataFlow(contracts: ContractInfo[]): string {
     if (contracts.length === 0) {
-      return 'graph TD\n    A[No contracts found]';
+      return `
+flowchart TD
+    A[User Interface] --> B[Protocol Entry Point]
+    B --> C[Business Logic]
+    C --> D[State Management]
+    D --> E[Asset Storage]
+      `;
     }
+
+    // Generate dynamic Mermaid.js flowchart based on actual contracts
+    let mermaidCode = 'flowchart TD\n';
     
-    let mermaidCode = 'graph TD\n';
-    mermaidCode += '    U[Users] --> M[Main Contract]\n';
+    // Add user entry point
+    mermaidCode += '    User[👤 User] --> Entry[🚪 Entry Point]\n';
     
+    // Add contracts as nodes
     contracts.forEach((contract, index) => {
       const nodeId = `C${index}`;
-      mermaidCode += `    M --> ${nodeId}[${contract.name}]\n`;
+      const contractName = contract.name.replace(/[^a-zA-Z0-9]/g, '');
+      mermaidCode += `    Entry --> ${nodeId}[📄 ${contractName}]\n`;
       
-      if (contract.role.includes('Vault') || contract.role.includes('Asset')) {
-        mermaidCode += `    ${nodeId} --> T[Token Transfers]\n`;
-      }
-      
-      if (contract.role.includes('Oracle')) {
-        mermaidCode += `    EXT[External Oracles] --> ${nodeId}\n`;
+      // Add function flows for complex contracts
+      if (contract.functions > 5) {
+        mermaidCode += `    ${nodeId} --> ${nodeId}_Logic[⚙️ Business Logic]\n`;
+        mermaidCode += `    ${nodeId}_Logic --> ${nodeId}_State[💾 State Updates]\n`;
       }
     });
     
-    mermaidCode += '    T --> LP[Liquidity Providers]\n';
-    mermaidCode += '    M --> E[Events & Logs]\n';
+    // Add external interactions
+    mermaidCode += '    C0 --> External[🌐 External Calls]\n';
+    mermaidCode += '    External --> Events[📡 Event Emission]\n';
     
     return mermaidCode;
   }
 
   private generateInteractionDiagram(contracts: ContractInfo[]): string {
     if (contracts.length === 0) {
-      return 'sequenceDiagram\n    participant U as User\n    Note over U: No contracts to analyze';
+      return `
+sequenceDiagram
+    participant User
+    participant Contract
+    participant Storage
+    
+    User->>Contract: Function Call
+    Contract->>Storage: Read State
+    Storage-->>Contract: Current State
+    Contract->>Storage: Update State
+    Contract-->>User: Return Result
+      `;
+    }
+
+    // Generate dynamic Mermaid.js sequence diagram
+    let mermaidCode = 'sequenceDiagram\n';
+    
+    // Add participants
+    mermaidCode += '    participant User as 👤 User\n';
+    contracts.slice(0, 3).forEach((contract, index) => {
+      const contractName = contract.name.replace(/[^a-zA-Z0-9]/g, '');
+      mermaidCode += `    participant C${index} as 📄 ${contractName}\n`;
+    });
+    mermaidCode += '    participant Storage as 💾 Storage\n';
+    
+    // Add interaction flows
+    mermaidCode += '    User->>C0: Initialize Transaction\n';
+    
+    if (contracts.length > 1) {
+      mermaidCode += '    C0->>C1: Delegate Call\n';
+      mermaidCode += '    C1->>Storage: Read State\n';
+      mermaidCode += '    Storage-->>C1: Current Data\n';
+      mermaidCode += '    C1->>Storage: Update State\n';
+      mermaidCode += '    C1-->>C0: Return Data\n';
+    } else {
+      mermaidCode += '    C0->>Storage: Read/Write State\n';
+      mermaidCode += '    Storage-->>C0: State Data\n';
     }
     
-    let mermaidCode = 'sequenceDiagram\n';
-    mermaidCode += '    participant U as User\n';
-    
-    contracts.slice(0, 3).forEach(contract => {
-      const shortName = contract.name.replace(/Contract$/, '').substring(0, 10);
-      mermaidCode += `    participant ${shortName} as ${contract.name}\n`;
-    });
-    
-    mermaidCode += '    U->>+Main: deposit(amount)\n';
-    mermaidCode += '    Main->>+Vault: updateBalance(user, amount)\n';
-    mermaidCode += '    Vault-->>-Main: balanceUpdated\n';
-    mermaidCode += '    Main->>+Token: transfer(from, to, amount)\n';
-    mermaidCode += '    Token-->>-Main: transferComplete\n';
-    mermaidCode += '    Main-->>-U: depositConfirmed\n';
+    mermaidCode += '    C0-->>User: Transaction Result\n';
     
     return mermaidCode;
   }
 
-  private generateInheritanceDiagram(contracts: ContractInfo[]): string {
+  private generateInheritanceDiagram(contracts: ContractAnalysis[]): string {
     if (contracts.length === 0) {
-      return 'classDiagram\n    class NoContracts {\n        +analyze() void\n    }';
+      return `
+classDiagram
+    class BaseContract {
+        +modifier onlyOwner()
+        +function pause()
+        +function unpause()
     }
     
+    class MainContract {
+        +function execute()
+        +function validate()
+    }
+    
+    BaseContract <|-- MainContract
+      `;
+    }
+
+    // Generate dynamic Mermaid.js class diagram based on actual inheritance
     let mermaidCode = 'classDiagram\n';
     
-    // Add base contracts
-    mermaidCode += '    class BaseContract {\n';
-    mermaidCode += '        +modifier onlyOwner()\n';
-    mermaidCode += '        +function pause()\n';
-    mermaidCode += '        +function unpause()\n';
-    mermaidCode += '    }\n';
-    
-    contracts.forEach(contract => {
-      mermaidCode += `    class ${contract.name} {\n`;
-      mermaidCode += '        +modifier onlyAuthorized()\n';
-      mermaidCode += '        +function execute()\n';
-      mermaidCode += '        +function validate()\n';
-      mermaidCode += `        +uint256 complexity: ${contract.complexity}\n`;
-      mermaidCode += '    }\n';
+    contracts.forEach((contract, index) => {
+      const className = contract.contractName.replace(/[^a-zA-Z0-9]/g, '');
       
-      mermaidCode += `    BaseContract <|-- ${contract.name}\n`;
+      // Add class definition
+      mermaidCode += `    class ${className} {\n`;
+      
+      // Add key functions (limit to 5 for readability)
+      const keyFunctions = contract.functions.slice(0, 5);
+      keyFunctions.forEach(func => {
+        const visibility = func.visibility === 'public' ? '+' : 
+                          func.visibility === 'private' ? '-' : 
+                          func.visibility === 'internal' ? '#' : '~';
+        mermaidCode += `        ${visibility}${func.name}()\n`;
+      });
+      
+      // Add modifiers if any
+      if (contract.modifiers.length > 0) {
+        contract.modifiers.slice(0, 3).forEach(modifier => {
+          mermaidCode += `        +modifier ${modifier.name}()\n`;
+        });
+      }
+      
+      mermaidCode += '    }\n\n';
+      
+      // Add inheritance relationships
+      if (contract.inheritance.length > 0) {
+        contract.inheritance.forEach(parent => {
+          const parentName = parent.replace(/[^a-zA-Z0-9]/g, '');
+          // Check if parent exists in our contracts list
+          const parentExists = contracts.some(c => 
+            c.contractName.replace(/[^a-zA-Z0-9]/g, '') === parentName
+          );
+          
+          if (parentExists) {
+            mermaidCode += `    ${parentName} <|-- ${className}\n`;
+          } else {
+            // Add external parent class
+            mermaidCode += `    class ${parentName} {\n        <<interface>>\n    }\n`;
+            mermaidCode += `    ${parentName} <|-- ${className}\n`;
+          }
+        });
+      }
+    });
+    
+    // Add relationships between contracts based on function calls
+    contracts.forEach((contract, index) => {
+      const className = contract.contractName.replace(/[^a-zA-Z0-9]/g, '');
+      
+      // Look for potential relationships in function names
+      contracts.forEach((otherContract, otherIndex) => {
+        if (index !== otherIndex) {
+          const otherClassName = otherContract.contractName.replace(/[^a-zA-Z0-9]/g, '');
+          
+          // Check if this contract might use the other contract
+          const hasRelationship = contract.functions.some(func => 
+            func.name.toLowerCase().includes(otherContract.contractName.toLowerCase()) ||
+            otherContract.contractName.toLowerCase().includes('factory') ||
+            otherContract.contractName.toLowerCase().includes('manager')
+          );
+          
+          if (hasRelationship) {
+            mermaidCode += `    ${className} --> ${otherClassName} : uses\n`;
+          }
+        }
+      });
     });
     
     return mermaidCode;
