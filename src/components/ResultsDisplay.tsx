@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { FileText, Network, Download, Eye, BarChart3, Shield, ChevronDown, ChevronUp, ExternalLink, GitBranch, AlertTriangle, CheckCircle, XCircle, Info } from 'lucide-react';
 import { AnalysisResult, VulnerabilityDetail } from '../services/AnalysisEngine';
+import html2pdf from 'html2pdf.js';
 
 interface ResultTab {
   id: string;
@@ -16,30 +17,103 @@ interface ResultsDisplayProps {
 const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ analysisResult }) => {
   const [activeTab, setActiveTab] = useState('summary');
   const [showDetailedView, setShowDetailedView] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
 
   const handleViewDetails = () => {
     setShowDetailedView(!showDetailedView);
   };
 
-  const handleExportReport = () => {
-    const reportData = {
-      protocol: `${analysisResult.summary.name} Analysis`,
-      timestamp: analysisResult.timestamp,
-      summary: analysisResult.summary,
-      architecture: analysisResult.architecture,
-      security: analysisResult.security
-    };
+  const handleExportReport = async () => {
+    if (!reportRef.current) return;
 
-    const dataStr = JSON.stringify(reportData, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${analysisResult.summary.name.toLowerCase().replace(/\s+/g, '-')}-analysis-report.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    setIsExporting(true);
+    
+    try {
+      // Configure PDF options
+      const options = {
+        margin: [0.5, 0.5, 0.5, 0.5],
+        filename: `${analysisResult.summary.name.toLowerCase().replace(/\s+/g, '-')}-analysis-report.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+          scale: 2,
+          useCORS: true,
+          letterRendering: true,
+          allowTaint: false
+        },
+        jsPDF: { 
+          unit: 'in', 
+          format: 'a4', 
+          orientation: 'portrait',
+          compress: true
+        },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      };
+
+      // Create a clean version of the content for PDF
+      const element = reportRef.current.cloneNode(true) as HTMLElement;
+      
+      // Remove interactive elements that don't work well in PDF
+      const interactiveElements = element.querySelectorAll('button, .hover\\:, [class*="hover:"]');
+      interactiveElements.forEach(el => {
+        if (el.classList.contains('tab-button')) {
+          el.remove();
+        }
+      });
+
+      // Add PDF-specific styling
+      const style = document.createElement('style');
+      style.textContent = `
+        .pdf-content {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          line-height: 1.6;
+          color: #1f2937;
+        }
+        .pdf-content h1, .pdf-content h2, .pdf-content h3, .pdf-content h4 {
+          color: #111827;
+          page-break-after: avoid;
+        }
+        .pdf-content .vulnerability-card {
+          page-break-inside: avoid;
+          margin-bottom: 1rem;
+        }
+        .pdf-content .mermaid-code {
+          background: #f9fafb;
+          border: 1px solid #e5e7eb;
+          padding: 1rem;
+          border-radius: 0.5rem;
+          font-family: 'Courier New', monospace;
+          font-size: 0.875rem;
+          line-height: 1.4;
+          overflow-wrap: break-word;
+          word-break: break-all;
+        }
+        .pdf-content .section {
+          page-break-inside: avoid;
+          margin-bottom: 2rem;
+        }
+        .pdf-content .page-break {
+          page-break-before: always;
+        }
+        @media print {
+          .pdf-content {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+        }
+      `;
+      element.appendChild(style);
+      element.className = 'pdf-content';
+
+      // Generate PDF
+      await html2pdf().set(options).from(element).save();
+      
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const getSeverityIcon = (severity: VulnerabilityDetail['severity']) => {
@@ -78,7 +152,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ analysisResult }) => {
       label: 'Summary',
       icon: <FileText className="w-4 h-4" />,
       content: (
-        <div className="prose max-w-none">
+        <div className="prose max-w-none section">
           <h3 className="text-2xl font-bold text-black dark:text-white mb-4 transition-colors duration-300">Protocol Overview</h3>
           <div className="text-gray-700 dark:text-gray-300 leading-relaxed transition-colors duration-300">
             <div className="mb-6">
@@ -197,7 +271,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ analysisResult }) => {
       label: 'Architecture',
       icon: <Network className="w-4 h-4" />,
       content: (
-        <div>
+        <div className="section">
           <h3 className="text-2xl font-bold text-black dark:text-white mb-6 transition-colors duration-300">Smart Contract Architecture</h3>
           
           {/* Data Flow Diagram */}
@@ -206,7 +280,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ analysisResult }) => {
               <Network className="w-5 h-5 mr-2" />
               Data Flow Diagram (Mermaid Syntax)
             </h4>
-            <div className="bg-gray-900 dark:bg-gray-950 text-green-400 p-6 rounded-lg font-mono text-sm overflow-x-auto transition-colors duration-300">
+            <div className="mermaid-code">
               <pre>{analysisResult.architecture.dataFlow}</pre>
             </div>
             <div className="mt-2 text-sm text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg transition-colors duration-300">
@@ -224,7 +298,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ analysisResult }) => {
               <BarChart3 className="w-5 h-5 mr-2" />
               Interaction Sequence (Mermaid Syntax)
             </h4>
-            <div className="bg-gray-900 dark:bg-gray-950 text-blue-400 p-6 rounded-lg font-mono text-sm overflow-x-auto transition-colors duration-300">
+            <div className="mermaid-code">
               <pre>{analysisResult.architecture.interactionDiagram}</pre>
             </div>
             <div className="mt-2 text-sm text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg transition-colors duration-300">
@@ -242,7 +316,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ analysisResult }) => {
               <GitBranch className="w-5 h-5 mr-2" />
               Contract Inheritance & Relationships (Mermaid Syntax)
             </h4>
-            <div className="bg-gray-900 dark:bg-gray-950 text-purple-400 p-6 rounded-lg font-mono text-sm overflow-x-auto transition-colors duration-300">
+            <div className="mermaid-code">
               <pre>{analysisResult.architecture.inheritanceDiagram}</pre>
             </div>
             <div className="mt-2 text-sm text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg transition-colors duration-300">
@@ -337,7 +411,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ analysisResult }) => {
       label: 'Security Analysis',
       icon: <Shield className="w-4 h-4" />,
       content: (
-        <div>
+        <div className="section">
           <h3 className="text-2xl font-bold text-black dark:text-white mb-6 transition-colors duration-300">Security Assessment</h3>
           
           <div className="mb-6">
@@ -355,7 +429,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ analysisResult }) => {
               <h4 className="text-lg font-semibold text-black dark:text-white mb-4 transition-colors duration-300">🔍 Detailed Vulnerability Analysis</h4>
               <div className="space-y-4">
                 {analysisResult.security.vulnerabilities.map((vuln, index) => (
-                  <div key={index} className={`p-6 border rounded-lg transition-colors duration-300 ${getSeverityColor(vuln.severity)}`}>
+                  <div key={index} className={`vulnerability-card p-6 border rounded-lg transition-colors duration-300 ${getSeverityColor(vuln.severity)}`}>
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center space-x-3">
                         {getSeverityIcon(vuln.severity)}
@@ -475,7 +549,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ analysisResult }) => {
           <p className="text-xl text-gray-600 dark:text-gray-300 transition-colors duration-300">Comprehensive AI-powered insights into {analysisResult.summary.name}</p>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden transition-colors duration-300">
+        <div ref={reportRef} className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden transition-colors duration-300">
           {/* Tab Navigation */}
           <div className="border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
             <nav className="flex space-x-8 px-8">
@@ -483,7 +557,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ analysisResult }) => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center space-x-2 py-4 border-b-2 font-medium transition-colors duration-300 ${
+                  className={`tab-button flex items-center space-x-2 py-4 border-b-2 font-medium transition-colors duration-300 ${
                     activeTab === tab.id
                       ? 'border-black dark:border-white text-black dark:text-white'
                       : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
@@ -521,10 +595,11 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ analysisResult }) => {
                 </button>
                 <button 
                   onClick={handleExportReport}
-                  className="flex items-center space-x-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors duration-300"
+                  disabled={isExporting}
+                  className="flex items-center space-x-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
                 >
                   <Download className="w-4 h-4" />
-                  <span>Export Report</span>
+                  <span>{isExporting ? 'Generating PDF...' : 'Export PDF Report'}</span>
                 </button>
               </div>
             </div>

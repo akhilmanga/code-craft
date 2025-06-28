@@ -1,3 +1,49 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* PDF-specific styles */
+@media print {
+  .pdf-content {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .pdf-content .mermaid-code {
+    background: #f9fafb !important;
+    border: 1px solid #e5e7eb !important;
+    page-break-inside: avoid;
+  }
+  
+  .pdf-content .vulnerability-card {
+    page-break-inside: avoid;
+    margin-bottom: 1rem;
+  }
+  
+  .pdf-content .section {
+    page-break-inside: avoid;
+  }
+  
+  .pdf-content h1, 
+  .pdf-content h2, 
+  .pdf-content h3, 
+  .pdf-content h4 {
+    page-break-after: avoid;
+  }
+}
+
+/* Ensure proper styling for PDF generation */
+.mermaid-code {
+  font-family: 'Courier New', monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.vulnerability-card {
+  break-inside: avoid;
+}
+
+.section {
+  break-inside: avoid;
+}
