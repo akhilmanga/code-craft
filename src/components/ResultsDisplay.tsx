@@ -1,7 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { FileText, Network, Download, Eye, BarChart3, Shield, ChevronDown, ChevronUp, ExternalLink, GitBranch, AlertTriangle, CheckCircle, XCircle, Info } from 'lucide-react';
 import { AnalysisResult, VulnerabilityDetail } from '../services/AnalysisEngine';
-import html2pdf from 'html2pdf.js';
 
 interface ResultTab {
   id: string;
@@ -17,102 +16,49 @@ interface ResultsDisplayProps {
 const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ analysisResult }) => {
   const [activeTab, setActiveTab] = useState('summary');
   const [showDetailedView, setShowDetailedView] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const reportRef = useRef<HTMLDivElement>(null);
 
   const handleViewDetails = () => {
     setShowDetailedView(!showDetailedView);
   };
 
-  const handleExportReport = async () => {
-    if (!reportRef.current) return;
-
-    setIsExporting(true);
-    
+  const handleExportReport = () => {
     try {
-      // Configure PDF options
-      const options = {
-        margin: [0.5, 0.5, 0.5, 0.5],
-        filename: `${analysisResult.summary.name.toLowerCase().replace(/\s+/g, '-')}-analysis-report.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
-          scale: 2,
-          useCORS: true,
-          letterRendering: true,
-          allowTaint: false
+      // Create a comprehensive report object
+      const reportData = {
+        metadata: {
+          protocolName: analysisResult.summary.name,
+          analysisDate: analysisResult.timestamp,
+          exportDate: new Date().toISOString(),
+          version: '1.0.0'
         },
-        jsPDF: { 
-          unit: 'in', 
-          format: 'a4', 
-          orientation: 'portrait',
-          compress: true
-        },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        summary: analysisResult.summary,
+        architecture: analysisResult.architecture,
+        security: analysisResult.security
       };
 
-      // Create a clean version of the content for PDF
-      const element = reportRef.current.cloneNode(true) as HTMLElement;
+      // Convert to JSON string with proper formatting
+      const jsonString = JSON.stringify(reportData, null, 2);
       
-      // Remove interactive elements that don't work well in PDF
-      const interactiveElements = element.querySelectorAll('button, .hover\\:, [class*="hover:"]');
-      interactiveElements.forEach(el => {
-        if (el.classList.contains('tab-button')) {
-          el.remove();
-        }
-      });
-
-      // Add PDF-specific styling
-      const style = document.createElement('style');
-      style.textContent = `
-        .pdf-content {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          line-height: 1.6;
-          color: #1f2937;
-        }
-        .pdf-content h1, .pdf-content h2, .pdf-content h3, .pdf-content h4 {
-          color: #111827;
-          page-break-after: avoid;
-        }
-        .pdf-content .vulnerability-card {
-          page-break-inside: avoid;
-          margin-bottom: 1rem;
-        }
-        .pdf-content .mermaid-code {
-          background: #f9fafb;
-          border: 1px solid #e5e7eb;
-          padding: 1rem;
-          border-radius: 0.5rem;
-          font-family: 'Courier New', monospace;
-          font-size: 0.875rem;
-          line-height: 1.4;
-          overflow-wrap: break-word;
-          word-break: break-all;
-        }
-        .pdf-content .section {
-          page-break-inside: avoid;
-          margin-bottom: 2rem;
-        }
-        .pdf-content .page-break {
-          page-break-before: always;
-        }
-        @media print {
-          .pdf-content {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-        }
-      `;
-      element.appendChild(style);
-      element.className = 'pdf-content';
-
-      // Generate PDF
-      await html2pdf().set(options).from(element).save();
+      // Create blob and download
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      // Create temporary download link
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${analysisResult.summary.name.toLowerCase().replace(/\s+/g, '-')}-analysis-report.json`;
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
       
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      alert('Failed to generate PDF. Please try again.');
-    } finally {
-      setIsExporting(false);
+      console.error('Error exporting JSON report:', error);
+      alert('Failed to export report. Please try again.');
     }
   };
 
@@ -549,7 +495,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ analysisResult }) => {
           <p className="text-xl text-gray-600 dark:text-gray-300 transition-colors duration-300">Comprehensive AI-powered insights into {analysisResult.summary.name}</p>
         </div>
 
-        <div ref={reportRef} className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden transition-colors duration-300">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden transition-colors duration-300">
           {/* Tab Navigation */}
           <div className="border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
             <nav className="flex space-x-8 px-8">
@@ -595,11 +541,10 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ analysisResult }) => {
                 </button>
                 <button 
                   onClick={handleExportReport}
-                  disabled={isExporting}
-                  className="flex items-center space-x-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
+                  className="flex items-center space-x-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors duration-300"
                 >
                   <Download className="w-4 h-4" />
-                  <span>{isExporting ? 'Generating PDF...' : 'Export PDF Report'}</span>
+                  <span>Export JSON Report</span>
                 </button>
               </div>
             </div>
