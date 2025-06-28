@@ -10,7 +10,7 @@ const Hero: React.FC = () => {
           <h2 className="text-6xl md:text-7xl font-bold text-white mb-6 relative z-10">
             Decode Web3
             <span className="block text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 dark:from-gray-100 dark:to-gray-500">
-              Architecture
+              Protocol
             </span>
           </h2>
         </div>
