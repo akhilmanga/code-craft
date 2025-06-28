@@ -476,11 +476,6 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ analysisResult }) => {
                 </ul>
               </div>
             )}
-            
-            <div className="p-6 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 rounded-lg transition-colors duration-300">
-              <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2 transition-colors duration-300">📋 Audit Status</h4>
-              <p className="text-gray-700 dark:text-gray-300 transition-colors duration-300">{analysisResult.security.auditStatus}</p>
-            </div>
           </div>
         </div>
       )
