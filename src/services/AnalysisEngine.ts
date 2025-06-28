@@ -215,8 +215,8 @@ export class AnalysisEngine {
     const keyFeatures = this.extractKeyFeatures(repoData, docsData);
     console.log('🔑 Extracted key features:', keyFeatures);
 
-    // Generate Web3 fundamentals explanation
-    const web3Fundamentals = this.generateWeb3Fundamentals(category);
+    // Generate Web3 fundamentals explanation based on protocol documentation
+    const web3Fundamentals = this.generateWeb3Fundamentals(category, docsData);
     console.log('🌐 Generated Web3 fundamentals length:', web3Fundamentals.length);
 
     // Analyze economic model
@@ -378,16 +378,116 @@ This protocol represents a ${this.assessInnovationLevel(repoData, docsData)} app
     return features.length > 0 ? features : ['Smart contract automation', 'Decentralized protocol architecture'];
   }
 
-  private generateWeb3Fundamentals(category: ProtocolCategory): string {
-    return `Web3 represents the next evolution of the internet, built on blockchain technology that enables decentralized, trustless interactions without intermediaries. This protocol operates on Ethereum or compatible blockchains, leveraging smart contracts - self-executing programs that automatically enforce agreements and execute transactions when predetermined conditions are met.
+  private generateWeb3Fundamentals(category: ProtocolCategory, docsData: DocumentContent): string {
+    console.log('🌐 AnalysisEngine: Generating protocol-specific Web3 fundamentals...');
+    
+    // Extract relevant terms from the documentation
+    const content = docsData.content.toLowerCase();
+    const detectedTerms = this.extractWeb3Terms(content);
+    
+    console.log('🔍 Detected Web3/DeFi terms:', detectedTerms);
+    
+    // Build the explanation based on detected terms and protocol category
+    let explanation = `Web3 represents the next evolution of the internet, built on blockchain technology that enables decentralized, trustless interactions without intermediaries. This ${category.toLowerCase()} operates on Ethereum or compatible blockchains, leveraging smart contracts - self-executing programs that automatically enforce agreements and execute transactions when predetermined conditions are met.\n\n`;
+    
+    // Add protocol-specific explanations based on detected terms
+    const termExplanations = [];
+    
+    if (detectedTerms.includes('liquidity')) {
+      termExplanations.push('**Liquidity** refers to the availability of assets for trading or lending within this protocol. Liquidity providers deposit tokens into pools, earning fees from trades or lending activities. The protocol uses liquidity pools to facilitate seamless asset exchanges and maintain price stability.');
+    }
+    
+    if (detectedTerms.includes('amm') || detectedTerms.includes('automated market maker')) {
+      termExplanations.push('**Automated Market Makers (AMMs)** are utilized by this protocol to determine asset prices using mathematical formulas based on supply and demand, eliminating the need for traditional order books. This enables continuous trading and price discovery.');
+    }
+    
+    if (detectedTerms.includes('yield') || detectedTerms.includes('farming')) {
+      termExplanations.push('**Yield Farming** is a core mechanism in this protocol, allowing users to earn rewards by providing liquidity or staking tokens. Users can maximize returns by strategically allocating assets across different yield-generating opportunities.');
+    }
+    
+    if (detectedTerms.includes('governance') || detectedTerms.includes('dao')) {
+      termExplanations.push('**Decentralized Governance** empowers token holders to participate in protocol decision-making through voting mechanisms. This ensures community-driven development and parameter adjustments without centralized control.');
+    }
+    
+    if (detectedTerms.includes('staking')) {
+      termExplanations.push('**Staking** allows users to lock their tokens to secure the network or participate in protocol governance, earning rewards in return. This mechanism aligns user incentives with protocol security and stability.');
+    }
+    
+    if (detectedTerms.includes('oracle')) {
+      termExplanations.push('**Oracles** provide external data feeds to the protocol, enabling smart contracts to access real-world information like asset prices. This is crucial for maintaining accurate valuations and triggering automated actions.');
+    }
+    
+    if (detectedTerms.includes('flash loan')) {
+      termExplanations.push('**Flash Loans** enable users to borrow assets without collateral, provided the loan is repaid within the same transaction. This protocol supports flash loan functionality for arbitrage and liquidation opportunities.');
+    }
+    
+    if (detectedTerms.includes('lending') || detectedTerms.includes('borrowing')) {
+      termExplanations.push('**Lending and Borrowing** mechanisms allow users to earn interest on deposited assets or borrow against collateral. Interest rates are typically determined algorithmically based on supply and demand dynamics.');
+    }
+    
+    if (detectedTerms.includes('derivative') || detectedTerms.includes('perpetual')) {
+      termExplanations.push('**Derivatives Trading** enables users to gain exposure to asset price movements without owning the underlying assets. Perpetual contracts allow for leveraged trading with automatic funding mechanisms.');
+    }
+    
+    if (detectedTerms.includes('bridge') || detectedTerms.includes('cross-chain')) {
+      termExplanations.push('**Cross-Chain Bridges** facilitate asset transfers between different blockchain networks, enabling interoperability and expanding the protocol\'s reach across multiple ecosystems.');
+    }
+    
+    // Add token standards explanation if relevant
+    if (detectedTerms.includes('erc20') || detectedTerms.includes('token')) {
+      termExplanations.push('**Token Standards** like ERC-20 (fungible tokens) define how tokens behave and interact within the ecosystem. This protocol implements these standards to ensure compatibility with wallets, exchanges, and other DeFi protocols.');
+    }
+    
+    if (detectedTerms.includes('nft') || detectedTerms.includes('erc721')) {
+      termExplanations.push('**NFTs (Non-Fungible Tokens)** using ERC-721 or ERC-1155 standards represent unique digital assets. This protocol incorporates NFT functionality for representing ownership, positions, or special privileges.');
+    }
+    
+    // Add the detected term explanations
+    if (termExplanations.length > 0) {
+      explanation += `Based on this protocol's documentation, the following DeFi concepts are particularly relevant:\n\n`;
+      explanation += termExplanations.join('\n\n') + '\n\n';
+    }
+    
+    // Add general concepts that are always relevant
+    explanation += `**Gas Optimization** is crucial for reducing transaction costs on Ethereum, involving techniques like batch operations and efficient storage patterns. **Consensus Mechanisms** ensure network security and transaction finality, while **Interoperability** enables cross-chain functionality and broader ecosystem integration.\n\n`;
+    
+    explanation += `Understanding these fundamentals is essential for evaluating the protocol's design decisions, security considerations, and potential risks in the broader Web3 ecosystem.`;
+    
+    console.log('✅ Generated protocol-specific Web3 fundamentals explanation');
+    return explanation;
+  }
 
-In the context of ${category.toLowerCase()}, several key DeFi (Decentralized Finance) concepts are fundamental to understanding this protocol:
-
-**Liquidity** refers to the availability of assets for trading or lending. Liquidity providers deposit tokens into pools, earning fees from trades or lending activities. **Automated Market Makers (AMMs)** use mathematical formulas to determine asset prices based on supply and demand, eliminating the need for traditional order books. **Yield farming** allows users to earn rewards by providing liquidity or staking tokens in various protocols.
-
-**Token standards** like ERC-20 (fungible tokens) and ERC-721 (NFTs) define how tokens behave and interact within the ecosystem. **Gas optimization** is crucial for reducing transaction costs on Ethereum, involving techniques like batch operations and efficient storage patterns. **Consensus mechanisms** ensure network security and transaction finality, while **interoperability** enables cross-chain functionality and broader ecosystem integration.
-
-Understanding these fundamentals is essential for evaluating the protocol's design decisions, security considerations, and potential risks in the broader Web3 ecosystem.`;
+  private extractWeb3Terms(content: string): string[] {
+    console.log('🔍 AnalysisEngine: Extracting Web3/DeFi terms from documentation...');
+    
+    const terms = [];
+    
+    // Core DeFi terms
+    if (content.includes('liquidity')) terms.push('liquidity');
+    if (content.includes('amm') || content.includes('automated market maker')) terms.push('amm');
+    if (content.includes('yield') || content.includes('farming')) terms.push('yield');
+    if (content.includes('governance') || content.includes('dao')) terms.push('governance');
+    if (content.includes('staking') || content.includes('stake')) terms.push('staking');
+    if (content.includes('oracle')) terms.push('oracle');
+    if (content.includes('flash loan')) terms.push('flash loan');
+    if (content.includes('lending') || content.includes('borrow')) terms.push('lending');
+    if (content.includes('derivative') || content.includes('perpetual')) terms.push('derivative');
+    if (content.includes('bridge') || content.includes('cross-chain')) terms.push('bridge');
+    
+    // Token standards
+    if (content.includes('erc20') || content.includes('erc-20')) terms.push('erc20');
+    if (content.includes('erc721') || content.includes('erc-721')) terms.push('erc721');
+    if (content.includes('nft')) terms.push('nft');
+    if (content.includes('token')) terms.push('token');
+    
+    // Technical concepts
+    if (content.includes('smart contract')) terms.push('smart contract');
+    if (content.includes('consensus')) terms.push('consensus');
+    if (content.includes('gas')) terms.push('gas');
+    if (content.includes('interoperability')) terms.push('interoperability');
+    
+    console.log(`🔍 Extracted ${terms.length} relevant terms:`, terms);
+    return terms;
   }
 
   private analyzeEconomicModel(docsData: DocumentContent): EconomicModel {
