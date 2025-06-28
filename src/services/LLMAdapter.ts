@@ -25,9 +25,14 @@ export interface SecurityInsight {
 
 export class LLMAdapter {
   private apiKey: string;
+  private baseUrl: string;
   
   constructor(apiKey: string) {
     this.apiKey = apiKey;
+    // Use custom URL from environment or fallback to OpenAI default
+    this.baseUrl = import.meta.env.VITE_OPENAI_BASE_URL || 'https://api.openai.com/v1';
+    
+    console.log('🤖 LLMAdapter: Initialized with base URL:', this.baseUrl);
   }
 
   async analyzeProtocol(context: LLMContext): Promise<AnalysisResult> {
@@ -79,7 +84,22 @@ Focus on providing insights that go beyond basic code analysis, incorporating
 the documentation context to explain the protocol's real-world applications
 and business logic.
 
-Format as JSON with markdown support for rich text sections.
+Return a JSON object with the following structure:
+{
+  "name": "Protocol Name",
+  "description": "Brief description",
+  "category": "DeFi Protocol",
+  "complexityScore": 7.5,
+  "overview": "Detailed overview...",
+  "keyFeatures": ["Feature 1", "Feature 2"],
+  "web3Fundamentals": "Web3 fundamentals explanation...",
+  "economicModel": {
+    "tokenomics": ["Token role 1", "Token role 2"],
+    "feeStructure": ["Fee type 1", "Fee type 2"],
+    "incentives": ["Incentive 1", "Incentive 2"],
+    "governance": "Governance model description"
+  }
+}
 `;
 
     try {
@@ -117,7 +137,28 @@ Generate enhanced Mermaid.js diagrams that include:
 - External dependency interactions
 - Security boundaries and access controls
 
-Provide actionable insights for developers and auditors.
+Return a JSON object with the following structure:
+{
+  "coreContracts": [
+    {
+      "name": "ContractName",
+      "description": "Contract description",
+      "functions": 10,
+      "complexity": 7.5,
+      "role": "Core Protocol Contract"
+    }
+  ],
+  "dependencies": ["dependency1", "dependency2"],
+  "dataFlow": "Mermaid.js flowchart syntax",
+  "interactionDiagram": "Mermaid.js sequence diagram syntax",
+  "inheritanceDiagram": "Mermaid.js class diagram syntax",
+  "designPatterns": ["Pattern1", "Pattern2"],
+  "gasOptimization": {
+    "efficiency": 8.0,
+    "optimizations": ["Optimization 1", "Optimization 2"],
+    "concerns": ["Concern 1", "Concern 2"]
+  }
+}
 `;
 
     try {
@@ -160,8 +201,15 @@ For each finding, provide:
 - Detailed mitigation strategies
 - Code examples where applicable
 
-Focus on real-world attack vectors and provide actionable security recommendations
-that go beyond generic best practices.
+Return a JSON object with the following structure:
+{
+  "rating": "B+",
+  "businessLogic": "Detailed business logic analysis...",
+  "strengths": ["Strength 1", "Strength 2"],
+  "vulnerabilities": ["Vulnerability 1", "Vulnerability 2"],
+  "recommendations": ["Recommendation 1", "Recommendation 2"],
+  "auditStatus": "Audit status description"
+}
 `;
 
     try {
@@ -175,22 +223,71 @@ that go beyond generic best practices.
   }
 
   private async callLLMAPI(prompt: string, analysisType: string): Promise<any> {
-    console.log(`🌐 LLMAdapter: Making API call for ${analysisType} analysis...`);
+    console.log(`🌐 LLMAdapter: Making API call for ${analysisType} analysis to ${this.baseUrl}...`);
     
-    // In a production environment, this would make actual API calls to OpenAI, Anthropic, etc.
-    // For now, we'll simulate the API call and return null to use fallback logic
-    
-    console.warn(`⚠️ LLMAdapter: LLM integration not implemented in this environment for ${analysisType}`);
-    console.log('💡 LLMAdapter: To enable LLM features, implement actual API integration with:');
-    console.log('   - OpenAI GPT-4 API');
-    console.log('   - Anthropic Claude API');
-    console.log('   - Local LLM endpoints');
-    console.log('   - Custom fine-tuned models');
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    return null;
+    try {
+      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert Web3 protocol analyst. Always respond with valid JSON objects as requested.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 4000,
+          temperature: 0.3,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      
+      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+        throw new Error('Invalid API response structure');
+      }
+
+      const content = data.choices[0].message.content;
+      
+      try {
+        // Try to parse the JSON response
+        const parsedResult = JSON.parse(content);
+        console.log(`✅ LLMAdapter: Successfully parsed ${analysisType} response`);
+        return parsedResult;
+      } catch (parseError) {
+        console.warn(`⚠️ LLMAdapter: Failed to parse JSON response for ${analysisType}:`, parseError);
+        console.log('Raw response:', content);
+        return null;
+      }
+
+    } catch (error) {
+      console.error(`❌ LLMAdapter: API call failed for ${analysisType}:`, error);
+      
+      if (error instanceof Error) {
+        if (error.message.includes('401')) {
+          throw new Error('Invalid API key. Please check your OpenAI API key.');
+        } else if (error.message.includes('429')) {
+          throw new Error('API rate limit exceeded. Please try again later.');
+        } else if (error.message.includes('fetch')) {
+          throw new Error(`Network error: Unable to connect to ${this.baseUrl}. Please check your internet connection and API endpoint.`);
+        }
+      }
+      
+      throw error;
+    }
   }
 
   private stringifyRepoData(repoData: ProcessedRepository): string {
