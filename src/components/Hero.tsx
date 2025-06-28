@@ -17,7 +17,7 @@ const Hero: React.FC = () => {
         
         <p className="text-xl text-white/70 dark:text-gray-300 mb-12 leading-relaxed max-w-2xl mx-auto transition-colors duration-300">
           Advanced AI-powered analysis platform for security researchers to understand, 
-          visualize, and audit complex Web3 protocols with unprecedented clarity.
+          visualize, and audit complex Web3 protocols with clarity.
         </p>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
