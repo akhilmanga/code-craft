@@ -37,7 +37,11 @@ const Header: React.FC<HeaderProps> = ({ isDarkMode, toggleDarkMode }) => {
             </a>
           </nav>
           
-          
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Shield className="w-5 h-5 text-white/60" />
+              <Zap className="w-5 h-5 text-white/60 animate-pulse" />
+            </div>
             
             {/* Dark Mode Toggle */}
             <button
