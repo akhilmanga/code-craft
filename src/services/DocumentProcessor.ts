@@ -18,9 +18,9 @@ export class DocumentProcessor {
   private llmEnabled: boolean;
   private corsProxies = [
     'https://api.allorigins.win/get?url=',
-    ' https://corsproxy.io/?',
-    ' https://cors-anywhere.herokuapp.com/ ',
-    'https://thingproxy.freeboard.io/fetch/ '
+    'https://corsproxy.io/?',
+    'https://cors-anywhere.herokuapp.com/',
+    'https://thingproxy.freeboard.io/fetch/'
   ];
 
   constructor(githubToken?: string, llmAdapter?: LLMAdapter) {
@@ -606,10 +606,10 @@ export class DocumentProcessor {
     
     // Decode HTML entities
     content = content.replace(/&nbsp;/g, ' ');
-    content = content.replace(/&amp;/g, '&');
-    content = content.replace(/&lt;/g, '<');
-    content = content.replace(/&gt;/g, '>');
-    content = content.replace(/&quot;/g, '"');
+    content = content.replace(/&/g, '&');
+    content = content.replace(/</g, '<');
+    content = content.replace(/>/g, '>');
+    content = content.replace(/"/g, '"');
     content = content.replace(/&#39;/g, "'");
     
     return content;
