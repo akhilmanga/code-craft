@@ -26,7 +26,7 @@ const Footer: React.FC = () => {
           <div>
             <h4 className="font-semibold mb-4">Connect</h4>
             <div className="flex space-x-4">
-              <a href="#" className="p-2 bg-white/10 dark:bg-white/5 rounded-lg hover:bg-white/20 dark:hover:bg-white/10 transition-colors">
+              <a href="https://github.com/akhilmanga/code-craft" className="p-2 bg-white/10 dark:bg-white/5 rounded-lg hover:bg-white/20 dark:hover:bg-white/10 transition-colors">
                 <Github className="w-5 h-5" />
               </a>
               <a href="https://x.com/akhil_manga" target="_blank" rel="noopener noreferrer" className="p-2 bg-white/10 dark:bg-white/5 rounded-lg hover:bg-white/20 dark:hover:bg-white/10 transition-colors">
