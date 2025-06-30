@@ -67,7 +67,7 @@ After entering a GitHub repo and docs URL, Code Craft instantly generates:
 |---------------|------------|
 | **Frontend**  | Next.js, Tailwind CSS, Framer Motion |
 | **Backend**   | Node.js, Express, Llama-3.3-70B API |
-| **AI Logic**  | RAG + Code Parsing + NLP |
+| **AI Logic**  | Code Parsing + NLP |
 | **Diagrams**  | SolidityVisualizer Integration |
 | **Storage**   | MongoDB (for caching results) |
 
