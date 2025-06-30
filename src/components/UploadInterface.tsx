@@ -292,7 +292,7 @@ const UploadInterface: React.FC<UploadInterfaceProps> = ({ onAnalysisStateChange
               <FileText className="w-6 h-6 text-white dark:text-black" />
             </div>
             <h4 className="font-semibold text-black dark:text-white mb-2 transition-colors duration-300">LLM Document Processing</h4>
-            <p className="text-gray-600 dark:text-gray-300 text-sm transition-colors duration-300">Advanced NLP-powered protocol understanding with context-aware analysis</p>
+            <p className="text-gray-600 dark:text-gray-300 text-sm transition-colors duration-300">Advanced LLM-powered protocol understanding with context-aware analysis</p>
           </div>
           
           <div className="text-center p-6 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
