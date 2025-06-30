@@ -539,7 +539,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ analysisResult }) => {
                   className="flex items-center space-x-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors duration-300"
                 >
                   <Download className="w-4 h-4" />
-                  <span>Export JSON Report</span>
+                  <span>Export Report</span>
                 </button>
               </div>
             </div>
