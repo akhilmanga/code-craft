@@ -205,7 +205,7 @@ const UploadInterface: React.FC<UploadInterfaceProps> = ({ onAnalysisStateChange
                 )}
               </div>
               <div className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">
-                Protocol documentation processing with NLP-powered concept extraction
+                Protocol documentation processing with LLM-powered concept extraction
               </div>
             </div>
           </div>
