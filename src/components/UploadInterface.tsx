@@ -309,7 +309,7 @@ const UploadInterface: React.FC<UploadInterfaceProps> = ({ onAnalysisStateChange
           <div className="inline-flex items-center space-x-2 px-6 py-3 bg-black/5 dark:bg-white/5 rounded-full transition-colors duration-300">
             <FileText className="w-5 h-5 text-black dark:text-white" />
             <span className="text-sm text-black dark:text-white font-medium transition-colors duration-300">
-              Powered by RAGFlow engine for advanced document understanding and Web3 protocol analysis
+              Powered by llama-3.3-70b model for advanced document understanding and Web3 protocol analysis
             </span>
           </div>
         </div>
