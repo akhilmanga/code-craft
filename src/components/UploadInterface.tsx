@@ -151,7 +151,7 @@ const UploadInterface: React.FC<UploadInterfaceProps> = ({ onAnalysisStateChange
             Analyze Web3 Protocol
           </h2>
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto transition-colors duration-300">
-            Provide GitHub repository and documentation links for comprehensive AI-powered Web3 protocol analysis using advanced RAG engine
+            Provide GitHub repository and documentation links for comprehensive AI-powered Web3 protocol analysis using advanced llama model
           </p>
         </div>
 
@@ -291,7 +291,7 @@ const UploadInterface: React.FC<UploadInterfaceProps> = ({ onAnalysisStateChange
             <div className="w-12 h-12 bg-black dark:bg-white rounded-full flex items-center justify-center mx-auto mb-4 transition-colors duration-300">
               <FileText className="w-6 h-6 text-white dark:text-black" />
             </div>
-            <h4 className="font-semibold text-black dark:text-white mb-2 transition-colors duration-300">RAG Document Processing</h4>
+            <h4 className="font-semibold text-black dark:text-white mb-2 transition-colors duration-300">LLM Document Processing</h4>
             <p className="text-gray-600 dark:text-gray-300 text-sm transition-colors duration-300">Advanced NLP-powered protocol understanding with context-aware analysis</p>
           </div>
           
