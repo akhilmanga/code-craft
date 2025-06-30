@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Github, Link, Loader, CheckCircle, AlertCircle, FileText } from 'lucide-react';
+import { Github, Link, Loader, CheckCircle, AlertCircle, FileText, ExternalLink } from 'lucide-react';
 import { AnalysisEngine } from '../services/AnalysisEngine';
 
 interface UploadState {
@@ -311,6 +311,27 @@ const UploadInterface: React.FC<UploadInterfaceProps> = ({ onAnalysisStateChange
             <span className="text-sm text-black dark:text-white font-medium transition-colors duration-300">
               Powered by llama-3.3-70b model for advanced document understanding and Web3 protocol analysis
             </span>
+          </div>
+        </div>
+
+        {/* Project GitHub Link */}
+        <div className="mt-8 text-center">
+          <div className="inline-flex items-center space-x-3 px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl transition-colors duration-300 hover:shadow-lg transform hover:scale-105 transition-all duration-300">
+            <Github className="w-6 h-6 text-black dark:text-white" />
+            <div className="text-left">
+              <div className="text-sm font-medium text-black dark:text-white transition-colors duration-300">
+                Open Source Project
+              </div>
+              <a 
+                href="https://github.com/akhilmanga/code-craft" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-sm text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white transition-colors duration-300 flex items-center space-x-1"
+              >
+                <span>github.com/akhilmanga/code-craft</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
           </div>
         </div>
 
