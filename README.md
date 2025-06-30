@@ -73,10 +73,17 @@ After entering a GitHub repo and docs URL, Code Craft instantly generates:
 
 ---
 
-## 🔗 Example Input
+## 🏆 Built at Bolt Hackathon
 
-- **GitHub Repo**: [https://github.com/symbioticfi/middleware-sdk](https://github.com/symbioticfi/middleware-sdk)  
-- **Docs URL**: [https://docs.symbiotic.fi/](https://docs.symbiotic.fi/)
+This project was built during the Bolt Hackathon under the "One-Shot Competition" and "Inspirational Story" tracks.
+
+## 🙌 Team
+
+Code Craft was created by:
+
+Akhil Manga – Full Stack AI Developer
+
+Llama-3.3-70B – AI Brain of the operation 🧠
 
 ---
 
@@ -93,13 +100,5 @@ npm install
 # Run the development server
 npm run dev
 
-🏆 Built at Bolt Hackathon
-This project was built during the Bolt Hackathon under the "One-Shot Competition" and "Inspirational Story" tracks.
 
-🙌 Team
-Code Craft was created by:
-
-Akhil Manga – Full Stack AI Developer
-
-Llama-3.3-70B – AI Brain of the operation 🧠
 
