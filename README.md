@@ -1,6 +1,8 @@
 # 🛠️ Code Craft – Understand Web3 Protocols in Seconds
 
-**Code Craft** is an AI-powered assistant that helps security researchers, auditors, and developers instantly understand complex Web3 protocols. Just enter a GitHub repo and documentation link — and let our AI agent do the rest.
+**Code Craft** is an AI-powered assistant that helps security researchers, auditors, and developers instantly understand complex Web3 protocols. Just enter a GitHub repo and documentation link - and let our AI agent do the rest.
+
+Video Walkthrough: https://youtu.be/DNqBdh7ZLF0
 
 ---
 
