@@ -102,5 +102,14 @@ npm install
 # Run the development server
 npm run dev
 
+---
 
+🙏 Support / Donate
+
+If you found Code Craft helpful and would like to support its development, feel free to send a donation:
+
+**ETH / USDC / Other ERC-20 tokens:**  
+`0x71F074C355D61B6C91EfE10380d8038c3fE59A44`
+
+Thank you for supporting open-source tools in Web3 security! 💙
 
